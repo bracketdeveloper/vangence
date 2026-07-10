@@ -44,7 +44,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_category') {
         if ($conn->query($categoryUpdateQuery) === TRUE) {
             echo "Category has been edited successfully.";
         } else {
-            echo "An error occured while editing category.";
+            echo "An error occurred while editing category.";
         }
     }
 }
@@ -54,7 +54,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_category') {
     if ($conn->query($deleteQuery) === TRUE) {
         echo "Category has been deleted successfully.";
     } else {
-        echo "An error occured while deleting category.";
+        echo "An error occurred while deleting category.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
@@ -101,7 +101,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
             echo "Product has been added successfully.";
             generateBarcodeImage($productBarcode);
         } else {
-            echo "An error occured while adding new product.";
+            echo "An error occurred while adding new product.";
         }
     }
 }
@@ -141,7 +141,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
                 getProductImagesToDelete($conn);
                 echo "Product has been edited successfully.";
             } else {
-                echo "An error occured while editing product.";
+                echo "An error occurred while editing product.";
             }
         }
     } else {
@@ -167,7 +167,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
             getProductImagesToDelete($conn);
             echo "Product has been edited successfully.";
         } else {
-            echo "An error occured while editing product.";
+            echo "An error occurred while editing product.";
         }
     }
 }
@@ -178,7 +178,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_product') {
         getProductImagesToDelete($conn);
         echo "Product has been deleted successfully.";
     } else {
-        echo "An error occured while deleting product.";
+        echo "An error occurred while deleting product.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'add_to_bill') {
@@ -220,7 +220,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
     } catch (Exception $e) {
         // Rollback if any query fails
         $conn->rollback();
-        echo "Some error occured while saving bill.";
+        echo "Some error occurred while saving bill.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'print_bill') {
@@ -234,7 +234,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'print_bill') {
         echo "Bill has been save successfully.";
         echo " and now print bill"; //add code for printing
     } else {
-        echo "An error occured while saving and printing bill.";
+        echo "An error occurred while saving and printing bill.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'add_new_user') {
@@ -254,7 +254,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_user') {
         if ($conn->query($newUserInsertQuery) === TRUE) {
             echo "User has been added successfully.";
         } else {
-            echo "An error occured while adding new user.";
+            echo "An error occurred while adding new user.";
         }
     }
 }
@@ -299,7 +299,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'change_password') {
         $_SESSION["password"] = $newPassword;
         echo "Password has been changed successfully.";
     } else {
-        echo "An error occured while changing password.";
+        echo "An error occurred while changing password.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'get_user_data_by_id') {

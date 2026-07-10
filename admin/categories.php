@@ -2,7 +2,6 @@
 <?php
 require_once("model/functions.php");
 $allCategories = getAllCategories($conn);
-
 ?>
 <!-- Page Wrapper -->
 <div id="wrapper">
