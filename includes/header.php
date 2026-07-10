@@ -57,11 +57,19 @@ function renderMobileMenu($items) {
 
         if ($hasChildren) {
             echo '<div class="mb-2">';
+            // Parent link
             echo '<a data-bs-toggle="collapse" href="#mobCat' . $item['category_id'] . '" class="d-block text-decoration-none"> ' . $item['category'] . ' ▾</a>';
             echo '<div class="collapse ps-3" id="mobCat' . $item['category_id'] . '">';
+
+            // ADDED: The "All [Category]" link appears inside the collapsed menu
+            echo '<a href="shop.php?category=' . strtolower(urlencode($item['category'])) . '" class="d-block text-decoration-none py-1"> All ' . $item['category'] . ' </a>';
+
+            // Continue recursion
             renderMobileMenu($item['children']);
+
             echo '</div></div>';
         } else {
+            // Leaf category link
             echo '<a href="shop.php?category=' . strtolower(urlencode($item['category'])) . '" class="d-block text-decoration-none py-1"> ' . $item['category'] . ' </a>';
         }
     }
