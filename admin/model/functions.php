@@ -145,13 +145,13 @@ function generateProductBarcode()
 
 function generateBarcodeImage($barcodeNumber)
 {
-    require 'vendor/autoload.php';
-
-    $generator = new BarcodeGeneratorSVG();
-    $barcode = $generator->getBarcode($barcodeNumber, $generator::TYPE_EAN_13, true);
-    $path = "../barcodes/" . $barcodeNumber . ".svg";
-
-    file_put_contents($path, $barcode);
+//    require 'vendor/autoload.php';
+//
+//    $generator = new BarcodeGeneratorSVG();
+//    $barcode = $generator->getBarcode($barcodeNumber, $generator::TYPE_EAN_13, true);
+//    $path = "../barcodes/" . $barcodeNumber . ".svg";
+//
+//    file_put_contents($path, $barcode);
 }
 
 

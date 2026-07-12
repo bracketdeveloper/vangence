@@ -30,16 +30,16 @@ if (isset($_SESSION)) {
             <i class="fas fa-fw fa-plus"></i>
             <span>Add new category</span></a>
     </li>
-<!--    <li class="nav-item active">-->
-<!--        <a class="nav-link" href="products.php">-->
-<!--            <i class="fas fa-fw fa-box"></i>-->
-<!--            <span>Products</span></a>-->
-<!--    </li>-->
-<!--    <li class="nav-item active">-->
-<!--        <a class="nav-link" href="add-new-product.php">-->
-<!--            <i class="fas fa-fw fa-plus"></i>-->
-<!--            <span>Add new product</span></a>-->
-<!--    </li>-->
+    <li class="nav-item active">
+        <a class="nav-link" href="products.php">
+            <i class="fas fa-fw fa-box"></i>
+            <span>Products</span></a>
+    </li>
+    <li class="nav-item active">
+        <a class="nav-link" href="add-new-product.php">
+            <i class="fas fa-fw fa-plus"></i>
+            <span>Add new product</span></a>
+    </li>
 <!--    <li class="nav-item active">-->
 <!--        <a class="nav-link" href="sales.php">-->
 <!--            <i class="fas fa-fw fa-money-bill-wave"></i>-->

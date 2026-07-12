@@ -1,9 +1,7 @@
 function checkEmptyInput(inputEl, message) {
-    var input = inputEl.value
-    var input = input.trim();
-    if (input == "") {
+    if (!inputEl || inputEl.value.trim() === "") {
         alert(message);
-        inputEl.focus()
+        if (inputEl) inputEl.focus();
         return false;
     }
     return true;
@@ -21,7 +19,7 @@ function sendAjaxRequest(url, formData, redirectUrl) {
         processData: false,
         data: formData
     }).done(function (data) {
-        //console.log(data)
+        console.log(data)
         alert(data);
         let isData = redirectUrl && data !== "Product with same name already exists.";
         if (isData) {
@@ -198,61 +196,56 @@ function validateDeleteCategory(categoryId) {
 }
 
 function validateNewProduct() {
-    const productNameEl = document.getElementById('product-name');
-    const descriptionEl = document.getElementById('description');
-    const purchasingPriceEl = document.getElementById('purchasing-price');
-    const sellingPriceEl = document.getElementById('selling-price');
-    const imagesEl = document.getElementById('images').files;
-    const qtyEl = document.getElementById('qty');
-    const categoryIdEl = document.getElementById('category-id');
-    if (!checkEmptyInput(productNameEl, "Enter the product name")) {
-        return;
-    }
-    if (!checkEmptyInput(descriptionEl, "Enter the description")) {
-        return;
-    }
-    if (!checkEmptyInput(purchasingPriceEl, "Enter the purchasing price")) {
-        return;
-    }
-    if (!checkEmptyInput(sellingPriceEl, "Enter the selling price")) {
-        return;
-    }
-    if (+sellingPriceEl.value < +purchasingPriceEl.value) {
-        alert("Purchasing price can't be grater than selling price");
-        sellingPriceEl.focus()
-        return;
-    }
-    if (imagesEl.length === 0) {
+    const elements = {
+        name: document.getElementById('product-name'),
+        cat: document.getElementById('category-id'),
+        price: document.getElementById('selling-price'),
+        qty: document.getElementById('qty'),
+        sizes: document.getElementById('sizes'),
+        colors: document.getElementById('colors'),
+        desc: document.getElementById('description'),
+        details: document.getElementById('details'),
+        imgs: document.getElementById('images')
+    };
+    if (!checkEmptyInput(elements.name, "Enter name")) return false;
+    if (!checkEmptyInput(elements.cat, "Select category")) return false;
+    if (!checkEmptyInput(elements.price, "Enter price")) return false;
+    if (!checkEmptyInput(elements.qty, "Enter qty")) return false;
+    if (!checkEmptyInput(elements.sizes, "Enter sizes")) return false;
+    if (!checkEmptyInput(elements.colors, "Enter colors")) return false;
+    if (elements.imgs.files.length === 0) {
         alert("Select at least one image");
-        return;
+        elements.imgs.focus();
+        return false;
     }
-    if (!checkEmptyInput(qtyEl, "Enter the product quantity")) {
-        return;
-    }
-    if (!checkEmptyInput(categoryIdEl, "Select the category")) {
-        return;
-    }
+    if (!checkEmptyInput(elements.desc, "Enter description")) return false;
+    if (!checkEmptyInput(elements.details, "Enter details")) return false;
     var formData = new FormData();
-    formData.append(' product_name', productNameEl.value);
-    formData.append('description', descriptionEl.value);
-    formData.append('purchasing_price', purchasingPriceEl.value);
-    formData.append('selling_price', sellingPriceEl.value);
-    formData.append('qty', qtyEl.value);
-    formData.append('category_id', categoryIdEl.value);
-    for (let i = 0; i < imagesEl.length; i++) {
-        formData.append('images[]', imagesEl[i]);
+    formData.append('product_name', elements.name.value);
+    formData.append('category_id', elements.cat.value);
+    formData.append('selling_price', elements.price.value);
+    formData.append('qty', elements.qty.value);
+    formData.append('sizes', elements.sizes.value);
+    formData.append('colors', elements.colors.value);
+    formData.append('description', elements.desc.value);
+    formData.append('details', elements.details.value);
+    for (let i = 0; i < elements.imgs.files.length; i++) {
+        formData.append('images[]', elements.imgs.files[i]);
     }
     sendAjaxRequest("model/ajax.php?action=add_new_product", formData, "add-new-product.php");
+    return true;
 }
 
 function validateEditProduct(productId) {
     const productNameEl = document.getElementById('edit-product-name');
     const descriptionEl = document.getElementById('edit-description');
-    const purchasingPriceEl = document.getElementById('edit-purchasing-price');
+    const detailsEl = document.getElementById('edit-details');
     const sellingPriceEl = document.getElementById('edit-selling-price');
     const imagesEl = document.getElementById('edit-images').files;
     const qtyEl = document.getElementById('edit-qty');
     const categoryIdEl = document.getElementById('edit-category-id');
+    const sizesEl = document.getElementById('edit-sizes');
+    const colorsEl = document.getElementById('edit-colors');
     const existingImages = [];
     $('#existing-images img').each(function () {
         existingImages.push($(this).attr('src').split('/').pop());
@@ -260,42 +253,45 @@ function validateEditProduct(productId) {
     if (!checkEmptyInput(productNameEl, "Enter the product name")) {
         return;
     }
-    if (!checkEmptyInput(descriptionEl, "Enter the description")) {
-        return;
-    }
-    if (!checkEmptyInput(purchasingPriceEl, "Enter the purchasing price")) {
+    if (!checkEmptyInput(categoryIdEl, "Select the category")) {
         return;
     }
     if (!checkEmptyInput(sellingPriceEl, "Enter the selling price")) {
         return;
     }
-    if (+sellingPriceEl.value < +purchasingPriceEl.value) {
-        alert("Purchaing price can't be grater than selling price");
-        sellingPriceEl.focus()
+    if (!checkEmptyInput(qtyEl, "Enter the product quantity")) {
+        return;
+    }
+    if (!checkEmptyInput(sizesEl, "Enter the sizes")) {
+        return;
+    }
+    if (!checkEmptyInput(colorsEl, "Enter the colors")) {
+        return;
+    }
+    if (!checkEmptyInput(descriptionEl, "Enter the description")) {
+        return;
+    }
+    if (!checkEmptyInput(detailsEl, "Enter the product details")) {
         return;
     }
     if (imagesEl.length === 0 && existingImages.length === 0) {
         alert("Select at least one image");
         return;
     }
-    if (!checkEmptyInput(qtyEl, "Enter the product quantity")) {
-        return;
-    }
-    if (!checkEmptyInput(categoryIdEl, "Select the category")) {
-        return;
-    }
     var formData = new FormData();
     formData.append('edit_product_id', productId);
     formData.append('edit_product_name', productNameEl.value);
-    formData.append('edit_description', descriptionEl.value);
-    formData.append('edit_purchasing_price', purchasingPriceEl.value);
+    formData.append('edit_category_id', categoryIdEl.value);
     formData.append('edit_selling_price', sellingPriceEl.value);
     formData.append('edit_qty', qtyEl.value);
-    formData.append('edit_category_id', categoryIdEl.value);
+    formData.append('edit_sizes', sizesEl.value);
+    formData.append('edit_colors', colorsEl.value);
+    formData.append('edit_description', descriptionEl.value);
+    formData.append('edit_details', detailsEl.value);
     for (let i = 0; i < imagesEl.length; i++) {
         formData.append('images[]', imagesEl[i]);
     }
-    formData.append('existing_images', existingImages);
+    formData.append('existing_images', JSON.stringify(existingImages));
     sendAjaxRequest("model/ajax.php?action=edit_product", formData, `edit-product.php?product_id=${productId}`);
 }
 
@@ -523,120 +519,22 @@ function printBill(items, finalBill) {
     w.onafterprint = () => w.close();
 }
 
-function printBarcode(barcode, productName, price) {
-    const full = window.location.pathname;
-    const folder = full.substring(0, full.lastIndexOf("/") + 1);
-    var barcodeImage = folder + "barcodes/" + barcode + ".svg";
-    const html = `
-                <html>
-                <head>
-                  <style>
-                    @page {
-                      size: 2in 1in;
-                      margin: 0;
-                    }
-                
-                    body {
-                      margin: 0;
-                      padding: 0;
-                      font-family: Arial, sans-serif;
-                    }
-                
-                    .label {
-                      width: 2in;
-                      height: 1in;
-                      display: flex;
-                      flex-direction: column;
-                      justify-content: space-between;
-                      padding: 2px;
-                      box-sizing: border-box;
-                      font-family: Arial, sans-serif;
-                    }
-                    
-                    .barcodeBox {
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      height: 50%;
-                    }
-                    
-                    .barcodeBox img {
-                      max-width: 90%;
-                      max-height: 100%;
-                      margin-right: 5px;
-                      margin-left: 5px;
-                    }
-                    
-                    .barcodeNum {
-                      text-align: center;
-                      font-size: 12px;
-                      margin-top: 0px;
-                      white-space: nowrap;
-                      overflow: hidden;
-                    }
-                    
-                    .bottomRow {
-                      display: flex;
-                      justify-content: space-between;
-                      align-items: center;
-                      font-size: 12px;
-                      width: 100%;
-                      white-space: nowrap;
-                      overflow: hidden;
-                    }
-                    
-                    .leftText {
-                      flex: 1;
-                      text-align: left;
-                      overflow: hidden;
-                      margin-left: 5px;
-                    }
-                    
-                    .rightText {
-                      text-align: right;
-                      margin-right: 5px;
-                    }
-                  </style>
-                </head>
-                
-                <body>
-                  <div class="label">
-                
-                    <div class="barcodeBox">
-                      <img id="codeImage" src="${barcodeImage}">
-                    </div>
-                
-                    <div class="barcodeNum">${barcode}</div>
-                
-                    <div class="bottomRow">
-                      <div class="leftText" id="name">${productName}</div>
-                      <div class="rightText" id="price">${price} PKR</div>
-                    </div>
-                
-                  </div>
-                </body>
-                </html>
-                `;
-    const w = window.open("", "", "width=600,height=800");
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-// Wait until the window is fully ready
-    w.onload = () => {
-        const img = w.document.getElementById("codeImage");
-        // Wait until the image finishes loading
-        img.onload = () => {
-            w.focus();
-            w.print();
-            w.onafterprint = () => w.close();
-        };
-        // If cached image (SVG often loads instantly), print immediately
-        if (img.complete) {
-            w.focus();
-            w.print();
-            w.onafterprint = () => w.close();
-        }
-    };
+function printBarcode(barcode, name, price) {
+    var printWindow = window.open('', '_blank', 'width=800,height=600');
+    printWindow.document.write('<html><head><title>Print Barcode</title>');
+    printWindow.document.write('<style>body { text-align: center; font-family: sans-serif; } svg { width: 80%; }</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<h3>' + name + '</h3>');
+    printWindow.document.write('<p>Price: ' + price + '</p>');
+    printWindow.document.write('<svg id="barcode"></svg>');
+    printWindow.document.write('<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>');
+    printWindow.document.write('<script>JsBarcode("#barcode", "' + barcode + '", { format: "CODE128", displayValue: true });</script>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    // Give it a split second to render the SVG before printing
+    setTimeout(function() {
+        printWindow.print();
+    }, 500);
 }
 
 function printAnyLabel(items, finalBill) {
