@@ -3,7 +3,15 @@ require_once "functions.php";
 if (!isset($_SESSION)) {
     session_start();
 }
+
+// Ensure output is clean for all responses
+function sendResponse($message) {
+    ob_clean();
+    echo $message;
+}
+
 if (isset($_GET['action']) && $_GET['action'] == 'add_new_category') {
+    ob_clean();
     $category = mysqli_real_escape_string($conn, $_POST['new_category']);
     $parent_id = isset($_POST['parent_id']) && $_POST['parent_id'] != ''
         ? intval($_POST['parent_id'])
@@ -24,6 +32,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_category') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'edit_category') {
+    ob_clean();
     $category = mysqli_real_escape_string($conn, $_POST['edit_category']);
     $categoryId = mysqli_real_escape_string($conn, $_POST['category_id']);
     $parentId = mysqli_real_escape_string($conn, $_POST['parent_id']);
@@ -49,6 +58,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_category') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'delete_category') {
+    ob_clean();
     $categoryId = mysqli_real_escape_string($conn, $_POST['category_id']);
     $deleteQuery = "DELETE FROM `categories` WHERE  `category_id` = '$categoryId'";
     if ($conn->query($deleteQuery) === TRUE) {
@@ -58,10 +68,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_category') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
+    ob_clean();
     $prefix = "PROD";
     $productId = $prefix . '_' . time();
 
-    // Sanitize inputs
     $productName = mysqli_real_escape_string($conn, $_POST['product_name']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $details     = mysqli_real_escape_string($conn, $_POST['details']);
@@ -69,7 +79,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
     $qty          = mysqli_real_escape_string($conn, $_POST['qty']);
     $categoryId   = mysqli_real_escape_string($conn, $_POST['category_id']);
 
-    // Process Arrays (Convert comma-separated strings to JSON)
     $sizesArray  = explode(',', $_POST['sizes']);
     $colorsArray = explode(',', $_POST['colors']);
     $sizesJson   = json_encode(array_map('trim', $sizesArray));
@@ -96,14 +105,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
         }
         $imageJson = json_encode($imageNames);
 
-        // Updated INSERT query
         $newProductInsertQuery = "INSERT INTO `products` 
             (`product_id`, `product_name`, `description`, `details`, `selling_price`, `image`, `qty`, `barcode`, `category_id`, `sizes`, `colors`) 
             VALUES 
             ('$productId', '$productName', '$description', '$details', '$sellingPrice', '$imageJson', '$qty', '$productBarcode', '$categoryId', '$sizesJson', '$colorsJson')";
 
         if ($conn->query($newProductInsertQuery) === TRUE) {
-            // Cleanup and success
             $productDetails = getAllProducts($conn);
             $images = [];
             foreach ($productDetails as $product) {
@@ -121,6 +128,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
+    ob_clean();
     $productId = mysqli_real_escape_string($conn, $_POST['edit_product_id']);
     $productName = mysqli_real_escape_string($conn, $_POST['edit_product_name']);
     $description = mysqli_real_escape_string($conn, $_POST['edit_description']);
@@ -129,7 +137,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
     $qty = mysqli_real_escape_string($conn, $_POST['edit_qty']);
     $categoryId = mysqli_real_escape_string($conn, $_POST['edit_category_id']);
 
-    // Convert comma separated strings to JSON arrays
     $sizes = json_encode(array_map('trim', explode(',', $_POST['edit_sizes'])));
     $colors = json_encode(array_map('trim', explode(',', $_POST['edit_colors'])));
 
@@ -177,6 +184,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
 }
 
 if (isset($_GET['action']) && $_GET['action'] == 'delete_product') {
+    ob_clean();
     $productId = mysqli_real_escape_string($conn, $_POST['product_id']);
     $deleteQuery = "DELETE FROM `products` WHERE  `product_id` = '$productId'";
     if ($conn->query($deleteQuery) === TRUE) {
@@ -195,6 +203,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_to_bill') {
     echo json_encode($product);
 }
 if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
+    ob_clean();
     $productQtyMap = json_decode($_POST['productQtyMap'], true);
     $rows = json_decode($_POST['rows'], true);
     $rows = mysqli_real_escape_string($conn, json_encode($rows));
@@ -202,13 +211,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
     $userName = $_SESSION['name'];
     $conn->begin_transaction();
     try {
-        // 1. Insert sale
         $newCategoryInsertQuery = "INSERT INTO `sales`(`items`, `final_bill`, `created_by`) 
                                VALUES ('$rows', '$finalBill', '$userName')";
         if (!$conn->query($newCategoryInsertQuery)) {
             throw new Exception("Error saving bill: " . $conn->error);
         }
-        // 2. Update product quantities
         foreach ($productQtyMap as $product_id => $qty) {
             $product_id = mysqli_real_escape_string($conn, $product_id);
             $qty = (int)$qty;
@@ -219,16 +226,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
                 throw new Exception("Error updating product: $product_id - " . $conn->error);
             }
         }
-        // 3. Commit transaction
         $conn->commit();
         echo "Bill has been saved successfully.";
     } catch (Exception $e) {
-        // Rollback if any query fails
         $conn->rollback();
         echo "Some error occurred while saving bill.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'print_bill') {
+    ob_clean();
     $rows = json_decode($_POST['rows'], true);
     $rows = mysqli_real_escape_string($conn, json_encode($rows));
     $finalBill = mysqli_real_escape_string($conn, $_POST['final_bill']);
@@ -237,12 +243,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'print_bill') {
                                VALUES ('$rows', '$finalBill', '$userName')";
     if ($conn->query($newCategoryInsertQuery) === TRUE) {
         echo "Bill has been save successfully.";
-        echo " and now print bill"; //add code for printing
+        echo " and now print bill";
     } else {
         echo "An error occurred while saving and printing bill.";
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'add_new_user') {
+    ob_clean();
     $name = mysqli_real_escape_string($conn, $_POST['name']);
     $name = ucwords(strtolower($name));
     $email = mysqli_real_escape_string($conn, $_POST['email']);
@@ -264,6 +271,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_new_user') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'login_user') {
+    ob_clean();
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = mysqli_real_escape_string($conn, $_POST['password']);
     $loginQuery = "SELECT * FROM `users` WHERE `email` = '$email'";
@@ -286,10 +294,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'login_user') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'logout_user') {
+    ob_clean();
     session_destroy();
     echo "Logged out successfully.";
 }
 if (isset($_GET['action']) && $_GET['action'] == 'change_password') {
+    ob_clean();
     $newPassword = mysqli_real_escape_string($conn, $_POST['new_password']);
     $currentPassword = mysqli_real_escape_string($conn, $_POST['current_password']);
     $userId = $_SESSION["user_id"];
@@ -308,6 +318,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'change_password') {
     }
 }
 if (isset($_GET['action']) && $_GET['action'] == 'get_user_data_by_id') {
+    ob_clean();
     $userId = mysqli_real_escape_string($conn, $_POST['user_id']);
     $specificUser = getSpecificUserById($conn, $userId);
     echo json_encode($specificUser);

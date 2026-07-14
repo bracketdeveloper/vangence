@@ -37,9 +37,9 @@ function sendAjaxLoginRequest(url, formData, redirectUrl) {
         processData: false,
         data: formData
     }).done(function (data) {
-        // console.log(data)
-        alert(data);
-        if (redirectUrl && data == "Login successful.") {
+        var response = data.trim();
+        alert(response);
+        if (redirectUrl && response === "Login successful.") {
             window.location.href = redirectUrl;
         }
     });

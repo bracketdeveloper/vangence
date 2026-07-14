@@ -1,6 +1,5 @@
 <?php 
-include 'includes/products_db.php'; 
-include 'includes/header.php'; 
+include 'includes/header.php';
 ?>
 
 <!-- Page Title Banner -->

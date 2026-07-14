@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="cart-img-wrapper me-3">
-                                <img src="${item.image}" alt="${item.name}" class="img-fluid w-100 h-100 object-fit-cover">
+                                <img src="admin/uploads/${item.image}" alt="${item.name}" class="img-fluid w-100 h-100 object-fit-cover">
                             </div>
                             <div>
                                 <h4 class="cart-item-name h6 mb-1">${item.name}</h4>

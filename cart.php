@@ -1,5 +1,4 @@
-<?php 
-include 'includes/products_db.php'; 
+<?php
 include 'includes/header.php'; 
 ?>
 

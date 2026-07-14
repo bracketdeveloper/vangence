@@ -49,7 +49,7 @@ $allProducts = getAllProducts($conn);
                                         <tr>
                                             <th>Product Id</th>
                                             <th>Product Name</th>
-                                            <th>Price</th>
+                                            <th>Category</th> <th>Price</th>
                                             <th>Product Image</th>
                                             <th>Print Barcode</th>
                                             <?php if ($_SESSION['role'] == 'admin'): ?>
@@ -66,16 +66,16 @@ $allProducts = getAllProducts($conn);
                                             $firstImage = !empty($images) ? $images[0] : 'no-image.png';
                                             ?>
                                             <tr>
-                                            <td><?php echo $product['product_id']; ?></td>
-                                            <td><?php echo $product['product_name']; ?></td>
-                                            <td><?php echo $product['selling_price']; ?></td>
+                                            <td><?php echo htmlspecialchars($product['product_id']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['product_name']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
                                             <td><img src="uploads/<?php echo htmlspecialchars($firstImage); ?>"
                                                      alt="Product Image"
                                                      style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
                                             </td>
                                             <td><button class="btn btn-dark" onclick="printBarcode(
                                                         '<?php echo $product['barcode']; ?>',
-                                                        '<?php echo $product['product_name']; ?>',
+                                                        '<?php echo htmlspecialchars($product['product_name']); ?>',
                                                         '<?php echo $product['selling_price']; ?>'
                                                         )">Print</button></td>
                                             <?php if ($_SESSION['role'] == 'admin'): ?>
@@ -87,7 +87,7 @@ $allProducts = getAllProducts($conn);
                                                    class="btn btn-success">Edit</a></td>
                                             <td>
                                                 <a onclick="return validateDeleteProduct('<?php echo $product['product_id']; ?>')"
-                                                   class="btn btn-danger">Delete</i></a></td>
+                                                   class="btn btn-danger">Delete</a></td>
                                             </tr>
                                         <?php endif; ?>
                                         <?php endforeach; ?>

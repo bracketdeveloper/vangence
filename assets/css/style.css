@@ -147,7 +147,7 @@ header.navbar-scrolled {
         display: block;
         animation: fadeInMenu 0.2s ease-out;
     }
-    
+
     @keyframes fadeInMenu {
         from {
             opacity: 0;
@@ -758,4 +758,17 @@ footer h5 {
 
 .category-card:hover .category-card-link {
     color: var(--color-white) !important;
+}
+.color-box {
+    display: block;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #333;
+    cursor: pointer;
+    border-radius: 50%; /* This makes them round */
+}
+
+.color-box.active {
+    outline: 2px solid #000;
+    outline-offset: 2px;
 }
