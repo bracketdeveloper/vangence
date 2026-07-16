@@ -35,5 +35,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+    <link rel="icon" type="image/x-icon" href="../assets/images/favicon.svg">
 </head>
 <body id="page-top">

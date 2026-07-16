@@ -331,6 +331,119 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
     </div>
     <?php
 }
+function getHeroSection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'hero_banner' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        // Decode the JSON string back into an associative array
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
+function getCollectionSection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'collection_section' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
+
+function getProductSection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'product_section' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
+
+function getPhilosophySection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'philosophy_section' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
+
+function getAboutSection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'about_section' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
+
+function getContactSection($conn)
+{
+    $query = "
+        SELECT content_data 
+        FROM site_content 
+        WHERE page_identifier = 'home' 
+        AND section_identifier = 'contact_section' 
+        LIMIT 1
+    ";
+
+    $result = runSelectQuery($conn, $query);
+
+    if (!empty($result)) {
+        return json_decode($result[0]['content_data'], true);
+    }
+
+    return null;
+}
 ?>
 
 

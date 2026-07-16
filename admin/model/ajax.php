@@ -323,3 +323,234 @@ if (isset($_GET['action']) && $_GET['action'] == 'get_user_data_by_id') {
     $specificUser = getSpecificUserById($conn, $userId);
     echo json_encode($specificUser);
 }
+// ===================== UPDATE HERO SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_hero_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'hero_banner'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $existing_bg_image = "";
+    if (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        $existing_data = json_decode($row['content_data'], true);
+        $existing_bg_image = isset($existing_data['bg_image']) ? $existing_data['bg_image'] : "";
+    }
+
+    $bg_image_path = $existing_bg_image;
+    if (isset($_FILES['bg_image']) && $_FILES['bg_image']['error'] == 0) {
+        $full_upload_path = "../img/" . basename($_FILES['bg_image']['name']);
+        if (move_uploaded_file($_FILES['bg_image']['tmp_name'], $full_upload_path)) {
+            $bg_image_path = "img/" . basename($_FILES['bg_image']['name']);
+        }
+    }
+
+    $content_data = json_encode([
+        'pre_title'   => $_POST['pre_title'],
+        'title'       => $_POST['title'],
+        'description' => $_POST['description'],
+        'button_text' => $_POST['button_text'],
+        'bg_image'    => $bg_image_path
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'hero_banner'";
+        echo ($conn->query($updateQuery) === TRUE) ? "Hero section updated successfully." : "An error occurred while updating the hero section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'hero_banner', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "Hero section added successfully." : "An error occurred while adding the hero section.";
+    }
+}
+
+
+// ===================== UPDATE COLLECTION SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_collection_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'collection_section'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $existing_mens_image = "";
+    $existing_womens_image = "";
+    if (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        $existing_data = json_decode($row['content_data'], true);
+        $existing_mens_image   = isset($existing_data['mens_image'])   ? $existing_data['mens_image']   : "";
+        $existing_womens_image = isset($existing_data['womens_image']) ? $existing_data['womens_image'] : "";
+    }
+
+    $mens_image_path   = $existing_mens_image;
+    $womens_image_path = $existing_womens_image;
+
+    if (isset($_FILES['mens_image']) && $_FILES['mens_image']['error'] == 0) {
+        $full_path = "../img/" . basename($_FILES['mens_image']['name']);
+        if (move_uploaded_file($_FILES['mens_image']['tmp_name'], $full_path)) {
+            $mens_image_path = "img/" . basename($_FILES['mens_image']['name']);
+        }
+    }
+
+    if (isset($_FILES['womens_image']) && $_FILES['womens_image']['error'] == 0) {
+        $full_path = "../img/" . basename($_FILES['womens_image']['name']);
+        if (move_uploaded_file($_FILES['womens_image']['tmp_name'], $full_path)) {
+            $womens_image_path = "img/" . basename($_FILES['womens_image']['name']);
+        }
+    }
+
+    $content_data = json_encode([
+        'mens_pre_title'   => $_POST['mens_pre_title'],
+        'mens_title'       => $_POST['mens_title'],
+        'mens_image'       => $mens_image_path,
+        'womens_pre_title' => $_POST['womens_pre_title'],
+        'womens_title'     => $_POST['womens_title'],
+        'womens_image'     => $womens_image_path
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'collection_section'";
+        echo ($conn->query($updateQuery) === TRUE) ? "Collection section updated successfully." : "An error occurred while updating the collection section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'collection_section', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "Collection section added successfully." : "An error occurred while adding the collection section.";
+    }
+}
+
+
+// ===================== UPDATE PRODUCT SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_product_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'product_section'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $content_data = json_encode([
+        'pre_title'   => $_POST['pre_title'],
+        'title'       => $_POST['title'],
+        'button_text' => $_POST['button_text']
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'product_section'";
+        echo ($conn->query($updateQuery) === TRUE) ? "Product section updated successfully." : "An error occurred while updating the product section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'product_section', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "Product section added successfully." : "An error occurred while adding the product section.";
+    }
+}
+
+
+// ===================== UPDATE PHILOSOPHY SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_philosophy_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'philosophy_section'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $existing_image = "";
+    if (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        $existing_data  = json_decode($row['content_data'], true);
+        $existing_image = isset($existing_data['image']) ? $existing_data['image'] : "";
+    }
+
+    $image_path = $existing_image;
+    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+        $full_path = "../img/" . basename($_FILES['image']['name']);
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $full_path)) {
+            $image_path = "img/" . basename($_FILES['image']['name']);
+        }
+    }
+
+    $content_data = json_encode([
+        'pre_title'   => $_POST['pre_title'],
+        'quote'       => $_POST['quote'],
+        'description' => $_POST['description'],
+        'button_text' => $_POST['button_text'],
+        'image'       => $image_path
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'philosophy_section'";
+        echo ($conn->query($updateQuery) === TRUE) ? "Philosophy section updated successfully." : "An error occurred while updating the philosophy section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'philosophy_section', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "Philosophy section added successfully." : "An error occurred while adding the philosophy section.";
+    }
+}
+
+
+// ===================== UPDATE ABOUT SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_about_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'about_section'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $existing_image_1 = "";
+    $existing_image_2 = "";
+    if (mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        $existing_data    = json_decode($row['content_data'], true);
+        $existing_image_1 = isset($existing_data['image_1']) ? $existing_data['image_1'] : "";
+        $existing_image_2 = isset($existing_data['image_2']) ? $existing_data['image_2'] : "";
+    }
+
+    $image_1_path = $existing_image_1;
+    $image_2_path = $existing_image_2;
+
+    if (isset($_FILES['image_1']) && $_FILES['image_1']['error'] == 0) {
+        $full_path = "../img/" . basename($_FILES['image_1']['name']);
+        if (move_uploaded_file($_FILES['image_1']['tmp_name'], $full_path)) {
+            $image_1_path = "img/" . basename($_FILES['image_1']['name']);
+        }
+    }
+
+    if (isset($_FILES['image_2']) && $_FILES['image_2']['error'] == 0) {
+        $full_path = "../img/" . basename($_FILES['image_2']['name']);
+        if (move_uploaded_file($_FILES['image_2']['tmp_name'], $full_path)) {
+            $image_2_path = "img/" . basename($_FILES['image_2']['name']);
+        }
+    }
+
+    $content_data = json_encode([
+        'pre_title'   => $_POST['pre_title'],
+        'title'       => $_POST['title'],
+        'description' => $_POST['description'],
+        'button_text' => $_POST['button_text'],
+        'image_1'     => $image_1_path,
+        'image_2'     => $image_2_path
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'about_section'";
+        echo ($conn->query($updateQuery) === TRUE) ? "About section updated successfully." : "An error occurred while updating the about section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'about_section', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "About section added successfully." : "An error occurred while adding the about section.";
+    }
+}
+
+
+// ===================== UPDATE CONTACT SECTION =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_contact_section') {
+    ob_clean();
+
+    $checkQuery = "SELECT id, content_data FROM `site_content` WHERE `page_identifier` = 'home' AND `section_identifier` = 'contact_section'";
+    $result = mysqli_query($conn, $checkQuery);
+
+    $content_data = json_encode([
+        'pre_title'   => $_POST['pre_title'],
+        'title'       => $_POST['title'],
+        'description' => $_POST['description'],
+        'address'     => $_POST['address'],
+        'email'       => $_POST['email'],
+        'contact'     => $_POST['contact']
+    ]);
+
+    if (mysqli_num_rows($result) > 0) {
+        $updateQuery = "UPDATE `site_content` SET `content_data` = '" . mysqli_real_escape_string($conn, $content_data) . "' WHERE `page_identifier` = 'home' AND `section_identifier` = 'contact_section'";
+        echo ($conn->query($updateQuery) === TRUE) ? "Contact section updated successfully." : "An error occurred while updating the contact section.";
+    } else {
+        $insertQuery = "INSERT INTO `site_content` (`page_identifier`, `section_identifier`, `content_data`) VALUES ('home', 'contact_section', '" . mysqli_real_escape_string($conn, $content_data) . "')";
+        echo ($conn->query($insertQuery) === TRUE) ? "Contact section added successfully." : "An error occurred while adding the contact section.";
+    }
+}

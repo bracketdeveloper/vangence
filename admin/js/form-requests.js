@@ -603,3 +603,214 @@ function validateUserLogin() {
 function validateUserLogout() {
     sendAjaxRequest("model/ajax.php?action=logout_user", null, "login.php");
 }
+
+function validateHeroSection() {
+    const heroPretitle = document.getElementById('hero-pretitle');
+    const heroTitle = document.getElementById('hero-title');
+    const heroDescription = document.getElementById('hero-description');
+    const heroButtonText = document.getElementById('hero-button-text');
+    const heroBgImage = document.getElementById('hero-bg-image');
+
+    // Check if an image is already displayed on the page
+    const hasExistingImage = document.querySelector('img[alt="Current Background"]') !== null;
+
+    if (!checkEmptyInput(heroPretitle, "Enter the pre-title")) return;
+    if (!checkEmptyInput(heroTitle, "Enter the title")) return;
+    if (!checkEmptyInput(heroDescription, "Enter the description")) return;
+    if (!checkEmptyInput(heroButtonText, "Enter the button text")) return;
+
+    // Only validate if there is NO existing image AND the user hasn't selected a new one
+    if (!hasExistingImage && heroBgImage.files.length === 0) {
+        alert("Select a background image");
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('pre_title', heroPretitle.value);
+    formData.append('title', heroTitle.value);
+    formData.append('description', heroDescription.value);
+    formData.append('button_text', heroButtonText.value);
+
+    // Only append image if a new one was selected
+    if (heroBgImage.files.length > 0) {
+        formData.append('bg_image', heroBgImage.files[0]);
+    }
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_hero_section",
+        formData,
+        "edit_home_page.php"
+    );
+}
+function validateCollectionSection() {
+    const mensPretitle   = document.getElementById('coll-mens-pretitle');
+    const mensTitle      = document.getElementById('coll-mens-title');
+    const mensImage      = document.getElementById('coll-mens-image');
+    const womensPretitle = document.getElementById('coll-womens-pretitle');
+    const womensTitle    = document.getElementById('coll-womens-title');
+    const womensImage    = document.getElementById('coll-womens-image');
+
+    const hasExistingMensImage   = document.querySelector('img[alt="Men\'s Collection Image"]') !== null;
+    const hasExistingWomensImage = document.querySelector('img[alt="Women\'s Collection Image"]') !== null;
+
+    if (!checkEmptyInput(mensPretitle,   "Enter the men's pre-title")) return;
+    if (!checkEmptyInput(mensTitle,      "Enter the men's title")) return;
+    if (!hasExistingMensImage && mensImage.files.length === 0) {
+        alert("Select a men's collection image");
+        return;
+    }
+
+    if (!checkEmptyInput(womensPretitle, "Enter the women's pre-title")) return;
+    if (!checkEmptyInput(womensTitle,    "Enter the women's title")) return;
+    if (!hasExistingWomensImage && womensImage.files.length === 0) {
+        alert("Select a women's collection image");
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('mens_pre_title',   mensPretitle.value);
+    formData.append('mens_title',       mensTitle.value);
+    formData.append('womens_pre_title', womensPretitle.value);
+    formData.append('womens_title',     womensTitle.value);
+
+    if (mensImage.files.length > 0)   formData.append('mens_image',   mensImage.files[0]);
+    if (womensImage.files.length > 0) formData.append('womens_image', womensImage.files[0]);
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_collection_section",
+        formData,
+        "edit_home_page.php"
+    );
+}
+
+function validateProductSection() {
+    const prodPretitle   = document.getElementById('prod-pretitle');
+    const prodTitle      = document.getElementById('prod-title');
+    const prodButtonText = document.getElementById('prod-button-text');
+
+    if (!checkEmptyInput(prodPretitle,   "Enter the pre-title")) return;
+    if (!checkEmptyInput(prodTitle,      "Enter the title")) return;
+    if (!checkEmptyInput(prodButtonText, "Enter the button text")) return;
+
+    var formData = new FormData();
+    formData.append('pre_title',   prodPretitle.value);
+    formData.append('title',       prodTitle.value);
+    formData.append('button_text', prodButtonText.value);
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_product_section",
+        formData,
+        "edit_home_page.php"
+    );
+}
+
+function validatePhilosophySection() {
+    const philPretitle   = document.getElementById('phil-pretitle');
+    const philQuote      = document.getElementById('phil-quote');
+    const philDesc       = document.getElementById('phil-description');
+    const philButtonText = document.getElementById('phil-button-text');
+    const philImage      = document.getElementById('phil-image');
+
+    const hasExistingImage = document.querySelector('img[alt="Philosophy Image"]') !== null;
+
+    if (!checkEmptyInput(philPretitle,   "Enter the pre-title")) return;
+    if (!checkEmptyInput(philQuote,      "Enter the quote")) return;
+    if (!checkEmptyInput(philDesc,       "Enter the description")) return;
+    if (!checkEmptyInput(philButtonText, "Enter the button text")) return;
+    if (!hasExistingImage && philImage.files.length === 0) {
+        alert("Select a philosophy image");
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('pre_title',   philPretitle.value);
+    formData.append('quote',       philQuote.value);
+    formData.append('description', philDesc.value);
+    formData.append('button_text', philButtonText.value);
+
+    if (philImage.files.length > 0) formData.append('image', philImage.files[0]);
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_philosophy_section",
+        formData,
+        "edit_home_page.php"
+    );
+}
+
+function validateAboutSection() {
+    const aboutPretitle   = document.getElementById('about-pretitle');
+    const aboutTitle      = document.getElementById('about-title');
+    const aboutDesc       = document.getElementById('about-description');
+    const aboutButtonText = document.getElementById('about-button-text');
+    const aboutImage1     = document.getElementById('about-image-1');
+    const aboutImage2     = document.getElementById('about-image-2');
+
+    const hasExistingImage1 = document.querySelector('img[alt="About Image 1"]') !== null;
+    const hasExistingImage2 = document.querySelector('img[alt="About Image 2"]') !== null;
+
+    if (!checkEmptyInput(aboutPretitle,   "Enter the pre-title")) return;
+    if (!checkEmptyInput(aboutTitle,      "Enter the title")) return;
+    if (!checkEmptyInput(aboutDesc,       "Enter the description")) return;
+    if (!checkEmptyInput(aboutButtonText, "Enter the button text")) return;
+    if (!hasExistingImage1 && aboutImage1.files.length === 0) {
+        alert("Select Image 1");
+        return;
+    }
+    if (!hasExistingImage2 && aboutImage2.files.length === 0) {
+        alert("Select Image 2");
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('pre_title',   aboutPretitle.value);
+    formData.append('title',       aboutTitle.value);
+    formData.append('description', aboutDesc.value);
+    formData.append('button_text', aboutButtonText.value);
+
+    if (aboutImage1.files.length > 0) formData.append('image_1', aboutImage1.files[0]);
+    if (aboutImage2.files.length > 0) formData.append('image_2', aboutImage2.files[0]);
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_about_section",
+        formData,
+        "edit_home_page.php"
+    );
+}
+
+function validateContactSection() {
+    const contactPretitle = document.getElementById('contact-pretitle');
+    const contactTitle    = document.getElementById('contact-title');
+    const contactDesc     = document.getElementById('contact-description');
+    const contactAddress  = document.getElementById('contact-address');
+    const contactEmail    = document.getElementById('contact-email');
+    const contactPhone    = document.getElementById('contact-phone');
+
+    if (!checkEmptyInput(contactPretitle, "Enter the pre-title")) return;
+    if (!checkEmptyInput(contactTitle,    "Enter the title")) return;
+    if (!checkEmptyInput(contactDesc,     "Enter the description")) return;
+    if (!checkEmptyInput(contactAddress,  "Enter the address")) return;
+    if (!checkEmptyInput(contactEmail,    "Enter the email address")) return;
+    if (!checkEmptyInput(contactPhone,    "Enter the contact number")) return;
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contactEmail.value.trim())) {
+        alert("Enter a valid email address");
+        contactEmail.focus();
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('pre_title',   contactPretitle.value);
+    formData.append('title',       contactTitle.value);
+    formData.append('description', contactDesc.value);
+    formData.append('address',     contactAddress.value);
+    formData.append('email',       contactEmail.value);
+    formData.append('contact',     contactPhone.value);
+
+    sendAjaxRequest(
+        "model/ajax.php?action=update_contact_section",
+        formData,
+        "edit_home_page.php"
+    );
+}

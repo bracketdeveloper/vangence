@@ -67,6 +67,7 @@ function renderMobileMenu($items) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/css/style.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="assets/images/favicon.svg">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         .arrow { font-size: 0.7em; margin-left: 5px; opacity: 0.7; }
         /* Dropdown Levels */
