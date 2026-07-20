@@ -98,7 +98,7 @@ include 'includes/header.php';
                         <h3 class="filter-title">Max Price</h3>
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span style="font-size: 0.85rem;">Up to:</span>
-                            <span class="fw-bold text-navy" id="price-val">$<?php echo number_format($priceMax, 2); ?></span>
+                            <span class="fw-bold text-navy" id="price-val">PKR <?php echo number_format($priceMax, 2); ?></span>
                         </div>
                         <input type="range" class="form-range" min="<?php echo ceil($realMinPrice); ?>" max="<?php echo ceil($realMaxPrice); ?>" step="10" name="price_max" id="price-slider"
                                value="<?php echo $priceMax; ?>"
@@ -189,7 +189,7 @@ include 'includes/header.php';
                 <div class="mb-3">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <label class="form-label mb-0">Max Price</label>
-                        <span class="fw-bold text-navy" id="mobile-price-val">$<?php echo number_format($priceMax, 2); ?></span>
+                        <span class="fw-bold text-navy" id="mobile-price-val">PKR <?php echo number_format($priceMax, 2); ?></span>
                     </div>
                     <input type="range" name="price_max" class="form-range" min="<?php echo ceil($realMinPrice); ?>" max="<?php echo ceil($realMaxPrice); ?>" value="<?php echo $priceMax; ?>"
                            oninput="document.getElementById('mobile-price-val').innerText = '$' + parseFloat(this.value).toFixed(2)"

@@ -313,7 +313,7 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                 </h3>
                 <div class="d-flex align-items-center justify-content-between mt-auto pt-2 border-top border-light">
                     <span class="product-card-price text-navy fw-semibold">
-                        $<?php echo number_format($product['selling_price'], 2); ?>
+                        PKR <?php echo number_format($product['selling_price'], 2); ?>
                     </span>
                     <button class="btn btn-navy btn-sm btn-add-to-cart text-uppercase"
                             data-id="<?php echo $product['id']; ?>"
@@ -323,7 +323,10 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                             data-size="<?php echo $firstSize; ?>"
                             data-color="<?php echo $firstColor; ?>"
                             style="font-size: 0.75rem; letter-spacing: 0.5px; padding: 6px 12px;">
-                        Add To Cart
+
+                        <span class="d-md-none" style="display: inline-block; min-width: 20px;">🛒</span>
+
+                        <span class="d-none d-md-inline">Add To Cart</span>
                     </button>
                 </div>
             </div>

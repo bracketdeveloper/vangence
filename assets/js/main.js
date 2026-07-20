@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                         </div>
                     </td>
-                    <td class="text-navy">$${item.price.toFixed(2)}</td>
+                    <td class="text-navy">${item.price.toFixed(2)}</td>
                     <td>
                         <div class="quantity-selector" data-index="${index}">
                             <button class="quantity-btn cart-qty-minus">-</button>
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <button class="quantity-btn cart-qty-plus">+</button>
                         </div>
                     </td>
-                    <td class="text-navy fw-semibold">$${itemTotal.toFixed(2)}</td>
+                    <td class="text-navy fw-semibold">PKR ${itemTotal.toFixed(2)}</td>
                     <td class="text-end">
                         <button class="btn btn-sm btn-outline-navy cart-remove-btn" data-index="${index}" style="padding: 4px 8px;">
                             <i class="fa-solid fa-trash-can"></i>
@@ -324,10 +324,8 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
         });
 
-        const shipping = 15.00;
-        const taxRate = 0.08;
-        const estimatedTax = subtotal * taxRate;
-        const finalTotal = subtotal + shipping + estimatedTax;
+        const shipping = subtotal > 10000 ? 0 : 250.00;
+        const finalTotal = subtotal + shipping;
 
         cartPageContainer.innerHTML = `
             <div class="row g-5">
@@ -367,20 +365,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal</span>
-                            <span class="text-navy fw-medium">$${subtotal.toFixed(2)}</span>
+                            <span class="text-navy fw-medium">${subtotal.toFixed(2)}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Flat Shipping</span>
-                            <span class="text-navy fw-medium">$${shipping.toFixed(2)}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <span>Estimated Tax (8%)</span>
-                            <span class="text-navy fw-medium">$${estimatedTax.toFixed(2)}</span>
+                            <span class="text-navy fw-medium">${shipping.toFixed(2)}</span>
                         </div>
                         
                         <div class="d-flex justify-content-between py-3 border-top border-navy border-2 mb-4">
                             <span class="fw-semibold">Estimated Total</span>
-                            <span class="text-navy fw-bold h5 mb-0">$${finalTotal.toFixed(2)}</span>
+                            <span class="text-navy fw-bold h5 mb-0">PKR ${finalTotal.toFixed(2)}</span>
                         </div>
                         
                         <button class="btn btn-navy w-100 py-3 text-uppercase" id="btn-checkout">

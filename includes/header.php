@@ -17,6 +17,7 @@ foreach ($tree as $id => &$node) {
         }
     }
 }
+
 /**
  * RECURSIVE FUNCTION TO RENDER DESKTOP MENU
  */
@@ -24,7 +25,6 @@ function renderDesktopMenu($items)
 {
     foreach ($items as $item) {
         $hasChildren = !empty($item['children']);
-        // Updated URL to include both name and ID
         $url = 'shop.php?category=' . strtolower(urlencode($item['category'])) . '&id=' . $item['category_id'];
         echo '<li class="nav-item ' . ($hasChildren ? 'dropdown' : '') . '">';
         $arrow = $hasChildren ? '<span class="arrow"> ▶</span>' : '';
@@ -37,24 +37,28 @@ function renderDesktopMenu($items)
         echo '</li>';
     }
 }
+
 /**
  * RECURSIVE FUNCTION TO RENDER MOBILE MENU
  */
 function renderMobileMenu($items) {
     foreach ($items as $item) {
         $hasChildren = !empty($item['children']);
-        // Updated URL to include both name and ID
         $url = 'shop.php?category=' . strtolower(urlencode($item['category'])) . '&id=' . $item['category_id'];
+
+        echo '<div class="mb-2">';
         if ($hasChildren) {
-            echo '<div class="mb-2">';
-            echo '<a data-bs-toggle="collapse" href="#mobCat' . $item['category_id'] . '" class="d-block text-decoration-none"> ' . $item['category'] . ' ▾</a>';
+            echo '<div class="d-flex align-items-center">';
+            echo '<a href="' . $url . '" class="flex-grow-1 text-decoration-none"> ' . $item['category'] . ' </a>';
+            echo '<a data-bs-toggle="collapse" href="#mobCat' . $item['category_id'] . '" class="text-decoration-none px-2"> ▾</a>';
+            echo '</div>';
             echo '<div class="collapse ps-3" id="mobCat' . $item['category_id'] . '">';
-            echo '<a href="' . $url . '" class="d-block text-decoration-none py-1"> All ' . $item['category'] . ' </a>';
             renderMobileMenu($item['children']);
-            echo '</div></div>';
+            echo '</div>';
         } else {
             echo '<a href="' . $url . '" class="d-block text-decoration-none py-1"> ' . $item['category'] . ' </a>';
         }
+        echo '</div>';
     }
 }
 ?>
@@ -70,19 +74,17 @@ function renderMobileMenu($items) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         .arrow { font-size: 0.7em; margin-left: 5px; opacity: 0.7; }
-        /* Dropdown Levels */
         .dropdown-menu .dropdown-menu { display: none !important; margin-top: -35px; margin-left: 100%; }
         .dropdown:hover > .dropdown-menu { display: block !important; }
         .dropdown-menu li:hover > .dropdown-menu { display: block !important; }
         .dropdown-item { display: block !important; }
-        /* Mobile Menu Styles */
         .offcanvas-body a { display: block; padding: 10px 0; text-decoration: none; color: #333; }
         .offcanvas-body .ps-3 a { padding-left: 15px; font-size: 0.9em; }
         .nav-link { cursor: pointer; }
     </style>
 </head>
 <body>
-<header class="sticky-top py-3">
+<header class="sticky-top py-3 bg-white border-bottom">
     <div class="container-fluid px-lg-5">
         <nav class="navbar navbar-expand-lg p-0">
             <a class="navbar-brand" href="index.php">Vangence</a>
@@ -91,18 +93,29 @@ function renderMobileMenu($items) {
                 <ul class="navbar-nav">
                     <?php renderDesktopMenu($menu); ?>
                     <li class="nav-item"><a class="nav-link" href="shop.php">Shop</a></li>
-                    <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                    <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
                 </ul>
+            </div>
+            <div class="d-none d-lg-block">
+                <a href="cart.php" class="nav-link d-inline-block px-2"><i class="fas fa-shopping-cart"></i></a>
+                <a href="checkout.php" class="nav-link d-inline-block px-2"><i class="fas fa-credit-card"></i></a>
             </div>
         </nav>
     </div>
 </header>
+
 <div class="offcanvas offcanvas-start" id="mobileNav">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Menu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
     <div class="offcanvas-body">
         <?php renderMobileMenu($menu); ?>
+        <hr>
+        <a href="cart.php"><i class="fas fa-shopping-cart"></i> Cart</a>
+        <a href="checkout.php"><i class="fas fa-credit-card"></i> Checkout</a>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

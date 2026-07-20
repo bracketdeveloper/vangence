@@ -16,7 +16,7 @@ $contactData    = getContactSection($conn);
 
     <!-- ======================== HERO ======================== -->
     <section class="hero-section d-flex align-items-center"
-             style="background-image: url('<?php echo "admin/" . htmlspecialchars($heroData['bg_image']); ?>');">
+                 style="background-image: url('<?php echo "admin/" . htmlspecialchars($heroData['bg_image']); ?>');">
         <div class="hero-overlay"></div>
         <div class="container-fluid px-lg-5 position-relative" style="z-index: 2;">
             <div class="row">
