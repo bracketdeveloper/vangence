@@ -1,8 +1,6 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-use Picqer\Barcode\BarcodeGeneratorSVG;
-
 require_once "db_connections.php";
 
 function getAllCategories($conn)
@@ -315,7 +313,7 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                     <span class="product-card-price text-navy fw-semibold">
                         PKR <?php echo number_format($product['selling_price'], 2); ?>
                     </span>
-                    <button class="btn btn-navy btn-sm btn-add-to-cart text-uppercase"
+                    <button class="btn btn-navy btn-xs btn-add-to-cart text-uppercase"
                             data-id="<?php echo $product['id']; ?>"
                             data-name="<?php echo htmlspecialchars($product['product_name']); ?>"
                             data-price="<?php echo $product['selling_price']; ?>"
@@ -323,10 +321,7 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                             data-size="<?php echo $firstSize; ?>"
                             data-color="<?php echo $firstColor; ?>"
                             style="font-size: 0.75rem; letter-spacing: 0.5px; padding: 6px 12px;">
-
-                        <span class="d-md-none" style="display: inline-block; min-width: 20px;">🛒</span>
-
-                        <span class="d-none d-md-inline">Add To Cart</span>
+                        <i class="fas fa-cart-plus"></i>
                     </button>
                 </div>
             </div>
