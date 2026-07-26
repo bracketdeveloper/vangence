@@ -81,6 +81,9 @@ function renderMobileMenu($items) {
         .offcanvas-body a { display: block; padding: 10px 0; text-decoration: none; color: #333; }
         .offcanvas-body .ps-3 a { padding-left: 15px; font-size: 0.9em; }
         .nav-link { cursor: pointer; }
+        /* Badge Styling */
+        .cart-badge { position: absolute; top: 0px; right: 0px; font-size: 0.7rem; background: red; color: white; border-radius: 50%; padding: 2px 6px; }
+        .position-relative { position: relative; }
     </style>
 </head>
 <body>
@@ -96,7 +99,10 @@ function renderMobileMenu($items) {
                 </ul>
             </div>
             <div class="d-none d-lg-block">
-                <a href="cart.php" class="nav-link d-inline-block px-2"><i class="fas fa-shopping-cart"></i></a>
+                <a href="cart.php" class="nav-link d-inline-block px-2 position-relative">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="desktop-cart-badge" class="cart-badge d-none">0</span>
+                </a>
                 <a href="checkout.php" class="nav-link d-inline-block px-2"><i class="fas fa-credit-card"></i></a>
             </div>
         </nav>
@@ -111,11 +117,39 @@ function renderMobileMenu($items) {
     <div class="offcanvas-body">
         <?php renderMobileMenu($menu); ?>
         <hr>
-        <a href="cart.php"><i class="fas fa-shopping-cart"></i> Cart</a>
+        <a href="cart.php" class="position-relative">
+            <i class="fas fa-shopping-cart"></i> Cart
+            <span id="mobile-cart-badge" class="cart-badge" style="position:static; margin-left: 5px; display:none;">0</span>
+        </a>
         <a href="checkout.php"><i class="fas fa-credit-card"></i> Checkout</a>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Update cart badge from localStorage
+    function updateCartBadge() {
+        // Assuming your cart is saved as a JSON array under the key 'cart'
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const count = cart.length;
+
+        const desktopBadge = document.getElementById('desktop-cart-badge');
+        const mobileBadge = document.getElementById('mobile-cart-badge');
+
+        if (count > 0) {
+            desktopBadge.textContent = count;
+            desktopBadge.classList.remove('d-none');
+
+            mobileBadge.textContent = count;
+            mobileBadge.style.display = 'inline-block';
+        } else {
+            desktopBadge.classList.add('d-none');
+            mobileBadge.style.display = 'none';
+        }
+    }
+
+    // Run on load
+    document.addEventListener('DOMContentLoaded', updateCartBadge);
+</script>
 </body>
 </html>

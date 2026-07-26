@@ -21,6 +21,11 @@ if (isset($_SESSION)) {
             <span>Dashboard</span></a>
     </li>
     <li class="nav-item active">
+        <a target="_blank" class="nav-link" href="pos.php">
+            <i class="fas fa-cash-register"></i>
+            <span>POS</span></a>
+    </li>
+    <li class="nav-item active">
         <a class="nav-link" href="categories.php">
             <i class="fas fa-fw fa-box"></i>
             <span>Categories</span></a>
@@ -40,11 +45,11 @@ if (isset($_SESSION)) {
             <i class="fas fa-fw fa-plus"></i>
             <span>Add new product</span></a>
     </li>
-<!--    <li class="nav-item active">-->
-<!--        <a class="nav-link" href="sales.php">-->
-<!--            <i class="fas fa-fw fa-money-bill-wave"></i>-->
-<!--            <span>Sales</span></a>-->
-<!--    </li>-->
+    <li class="nav-item active">
+        <a class="nav-link" href="sales.php">
+            <i class="fas fa-fw fa-money-bill-wave"></i>
+            <span>Sales</span></a>
+    </li>
     <?php if ($userRole === "admin"): ?>
         <li class="nav-item active">
             <a class="nav-link" href="users.php">

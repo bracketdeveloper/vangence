@@ -256,10 +256,14 @@ function getAllSales($conn)
     return runSelectQuery($conn, $query);
 }
 
-function getSaleById($conn, $saleId)
-{
-    $query = "SELECT * FROM `sales` WHERE `sale_id` = '$saleId'";
-    return runSelectQuery($conn, $query);
+function getSaleById($conn, $saleId) {
+    $saleId = (int)$saleId;
+    $query = "SELECT * FROM sales WHERE `sale_id` = $saleId LIMIT 1";
+    $result = $conn->query($query);
+    if (!$result || $result->num_rows === 0) {
+        return null;
+    }
+    return $result->fetch_assoc();
 }
 
 function generateProductBarcode()

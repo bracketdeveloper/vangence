@@ -57,7 +57,7 @@ function sendAjaxBillRequest(url, formData) {
             alert("No product found")
             return;
         }
-        let product = data[0]; // get the first object from the array
+        let product = data[0];
         let productId = product.product_id;
         let productName = product.product_name;
         let sellingPrice = product.selling_price;
@@ -70,26 +70,40 @@ function sendAjaxBillRequest(url, formData) {
 function addProduct(barcode, productName, price, productId, stockQty) {
     let table = $("#bill-table tbody");
     let row = $(`tr[data-barcode="${barcode}"]`);
+
     if (row.length > 0) {
         let qtyCell = row.find(".qty");
+        let taxCell = row.find(".tax");
         let lineCell = row.find(".line-total");
         let qty = parseInt(qtyCell.text()) + 1;
-        // check stock limit
+
         if (qty > stockQty) {
             alert("Cannot add more than available stock");
             return;
         }
+
         qtyCell.text(qty);
-        lineCell.text((qty * price));
+
+        let subtotal = price * qty;
+        let tax = subtotal * 0.12;
+        let lineTotal = subtotal + tax;
+
+        taxCell.text(tax.toFixed(2));
+        lineCell.text(lineTotal.toFixed(2));
     } else {
+        let subtotal = price * 1;
+        let tax = subtotal * 0.12;
+        let lineTotal = subtotal + tax;
+
         let newRow = `
         <tr data-barcode="${barcode}" data-stock="${stockQty}">
-            <td>${$("#cartTable tbody tr").length + 1}</td>
+            <td>${$("#bill-table tbody tr").length + 1}</td>
             <td class="product-id" hidden>${productId}</td>
             <td class="product-name">${productName}</td>
             <td class="price">${price}</td>
             <td class="qty">1</td>
-            <td class="line-total">${price}</td>
+            <td class="tax">${tax.toFixed(2)}</td>
+            <td class="line-total">${lineTotal.toFixed(2)}</td>
             <td>
                 <button class="increase">+</button>
                 <button class="decrease">-</button>
@@ -105,37 +119,54 @@ function addProduct(barcode, productName, price, productId, stockQty) {
 function updateTotal() {
     let total = 0;
     $("#bill-table tbody tr").each(function () {
-        let lineTotal = parseInt($(this).find(".line-total").text());
+        let lineTotal = parseFloat($(this).find(".line-total").text()) || 0;
         total += lineTotal;
     });
-    $("#final-bill").text(total);
+    $("#final-bill").text(total.toFixed(2));
 }
 
 $(document).on("click", ".increase", function () {
     let row = $(this).closest("tr");
-    let price = parseInt(row.find(".price").text());
+    let price = parseFloat(row.find(".price").text());
     let qty = parseInt(row.find(".qty").text());
-    let stock = parseInt(row.data("stock")); // available stock
+    let stock = parseInt(row.data("stock"));
+
     if (qty < stock) {
         qty++;
         row.find(".qty").text(qty);
-        row.find(".line-total").text(qty * price);
+
+        let subtotal = price * qty;
+        let tax = subtotal * 0.12;
+        let lineTotal = subtotal + tax;
+
+        row.find(".tax").text(tax.toFixed(2));
+        row.find(".line-total").text(lineTotal.toFixed(2));
+
         updateTotal();
     } else {
         alert("Cannot exceed available stock");
     }
 });
+
 $(document).on("click", ".decrease", function () {
     let row = $(this).closest("tr");
-    let price = parseInt(row.find(".price").text());
+    let price = parseFloat(row.find(".price").text());
     let qty = parseInt(row.find(".qty").text());
+
     if (qty > 1) {
         qty--;
         row.find(".qty").text(qty);
-        row.find(".line-total").text((qty * price));
+
+        let subtotal = price * qty;
+        let tax = subtotal * 0.12;
+        let lineTotal = subtotal + tax;
+
+        row.find(".tax").text(tax.toFixed(2));
+        row.find(".line-total").text(lineTotal.toFixed(2));
     }
     updateTotal();
 });
+
 $(document).on("click", ".remove", function () {
     $(this).closest("tr").remove();
     updateRowNumbers();
@@ -354,14 +385,14 @@ function validateProductForBill() {
         return;
     }
     if (barcodeEl.value.length < 5) {
-        alert("Enter at least 5 digits")
-        barcodeEl.focus()
+        alert("Enter at least 5 digits");
+        barcodeEl.focus();
         return;
     }
     var barcode = barcodeEl.value;
     var formData = new FormData();
     if (barcode.length > 12) {
-        barcode = barcode.substring(0, barcode.length - 1)
+        barcode = barcode.substring(0, barcode.length - 1);
     }
     formData.append('barcode', barcode);
     sendAjaxBillRequest("model/ajax.php?action=add_to_bill", formData);
@@ -382,6 +413,7 @@ function getTableData() {
             product_id: $(this).find('.product-id').text(),
             price: parseFloat($(this).find('.price').text()),
             qty: parseInt($(this).find('.qty').text()),
+            tax: parseFloat($(this).find('.tax').text()),
             total: parseFloat($(this).find('.line-total').text())
         });
     });
@@ -396,128 +428,364 @@ function clearCartTable() {
     document.getElementById("barcode").value = "";
 }
 
-$('#save-bill').click(function () {
-    let rows = getTableData();
-    let finalBill = $('#final-bill').text();
-    const productQtyMap = {};
-    rows.forEach(item => {
-        productQtyMap[item.product_id] = item.qty;
-    });
-    if (JSON.stringify(rows).length < 1) {
-        alert("Nothing is in table");
-        return;
+$('input[name="payment-method"]').on('change', function () {
+    let method = $(this).val();
+    if (method === 'cash') {
+        $('#cash-section').show();
+        $('#action-buttons').show();
+    } else if (method === 'card') {
+        $('#cash-section').hide();
+        $('#amount-received').val('');
+        $('#change-given').val('');
+        $('#action-buttons').show();
     }
+});
+
+$('#amount-received').on('input', function () {
+    let finalBill = parseFloat($('#final-bill').text()) || 0;
+    let received = parseFloat($(this).val()) || 0;
+    let change = received - finalBill;
+    $('#change-given').val(change > 0 ? change.toFixed(2) : '0.00');
+});
+
+function saveBill(printAfter) {
+    let rows = getTableData();
     if (!rows || rows.length === 0) {
         alert('No items in table');
         return;
     }
+    let finalBill = parseFloat($('#final-bill').text()) || 0;
+    let paymentMethod = $('input[name="payment-method"]:checked').val();
+    if (!paymentMethod) {
+        alert('Select a payment method');
+        return;
+    }
+    let amountReceived = 0;
+    let changeGiven = 0;
+
+    if (paymentMethod === 'cash') {
+        amountReceived = parseFloat($('#amount-received').val()) || 0;
+        if (amountReceived <= 0) {
+            alert('Enter amount received');
+            $('#amount-received').focus()
+            return;
+        }
+        if (amountReceived < finalBill) {
+            alert('Received amount is less than final bill');
+            return;
+        }
+        changeGiven = amountReceived - finalBill;
+    } else {
+        amountReceived = finalBill;
+    }
+
+    let productQtyMap = {};
+    rows.forEach(item => {
+        productQtyMap[item.product_id] = item.qty;
+    });
+
     var formData = new FormData();
     formData.append('rows', JSON.stringify(rows));
     formData.append('productQtyMap', JSON.stringify(productQtyMap));
     formData.append('final_bill', finalBill);
-    sendAjaxRequest("model/ajax.php?action=save_bill", formData,);
+    formData.append('payment_method', paymentMethod);
+    formData.append('amount_received', amountReceived);
+    formData.append('change_given', changeGiven);
+    formData.append('print_after', printAfter ? '1' : '0');
+
+    $.ajax({
+        url: "model/ajax.php?action=save_bill",
+        method: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            try {
+                let res = (typeof response === 'string') ? JSON.parse(response) : response;
+                if (res.status === 'success') {
+                    alert(res.message);
+                    if (res.print) {
+                        printBill(res);
+                    }
+                    clearCartTable();
+                    $('input[name="payment-method"]').prop('checked', false);
+                    $('#cash-section').hide();
+                    $('#action-buttons').hide();
+                } else {
+                    alert(res.message || 'Error saving bill');
+                }
+            } catch (e) {
+                alert(response);
+                clearCartTable();
+                $('input[name="payment-method"]').prop('checked', false);
+                $('#cash-section').hide();
+                $('#action-buttons').hide();
+            }
+        },
+        error: function () {
+            alert('Error saving bill');
+        }
+    });
+}
+
+function printBill(data) {
+    console.log(data)
+    let win = window.open('', '_blank', 'width=800,height=1000');
+    win.document.write('<html><head><title>Bill #' + data.sale_id + '</title>');
+    win.document.write('<style>body{font-family:monospace;font-size:12px;} table{width:100%;} th,td{padding:2px;text-align:left;} .right{text-align:right;}</style>');
+    win.document.write('</head><body>');
+    win.document.write('<h3>Receipt</h3>');
+    win.document.write('<p>Bill #: ' + data.sale_id + '</p>');
+    win.document.write('<hr>');
+    win.document.write('<table><thead><tr><th>Item</th><th class="right">Price</th><th class="right">Qty</th><th class="right">Tax</th><th class="right">Total</th></tr></thead><tbody>');
+    let items = data.items || [];
+    let html = '';
+    items.forEach(function (r) {
+        html += '<tr><td>' + r.product_name + '</td><td class="right">' + r.price + '</td><td class="right">' + r.qty + '</td><td class="right">' + (r.tax || '0.00') + '</td><td class="right">' + r.total + '</td></tr>';
+    });
+    win.document.write(html);
+    win.document.write('</tbody></table><hr>');
+    win.document.write('<p class="right">Total: ' + (data.final_bill || '-') + '</p>');
+    win.document.write('<p class="right">Payment: ' + (data.payment_method || '-') + '</p>');
+    win.document.write('<p class="right">Received: ' + (data.amount_received || '-') + '</p>');
+    win.document.write('<p class="right">Change: ' + (data.change_given || '-') + '</p>');
+    win.document.write('</body></html>');
+    win.document.close();
+    win.focus();
+    win.print();
+}
+
+$('#save-bill').click(function () {
+    saveBill(false);
 });
 
-function printBillHead() {
-    return `<head>
-      <title>Bill</title>
-      <style>
-      @media print {
-        @page { 
-          size: 80mm auto;  /* paper width fixed */
-          margin: 5px;         /* remove default page margins */
-        }
-        body {
-          margin: 5px;         /* remove body margin */
-          padding: 0;        /* remove body padding */
-        }
-      }
-      body {
-        font-family: Arial, sans-serif;
-        width: 80mm;
-        margin: 0 auto;
-        padding: 0;
-      }
-      .header, .footer {
-        text-align: center;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 0;       /* remove extra top margin */
-      }
-      th, td {
-        border-bottom: 1px solid #000;
-        padding: 4px;
-        text-align: left;
-        font-size: 12px;
-      }
-      .total-row td {
-        font-weight: bold;
-        border-top: 2px solid #000;
-      }
-      .footer{
-      margin-bottom: 20px !important;
-      }
-    </style>
-    </head>`
-}
+$('#print-bill').click(function () {
+    saveBill(true);
+});
 
-function printBill(items, finalBill) {
-    let rows = "";
-    items.forEach((item, i) => {
-        rows += `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${item.product_name}</td>
-        <td>${item.price}</td>
-        <td>${item.qty}</td>
-        <td>${item.total}</td>
-      </tr>
-    `;
+window.removeRowEdit = function (btn) {
+    const row = btn.closest('tr');
+    row.remove();
+    renumberRowsEdit();
+    calculateFinalBillEdit();
+    recalculateChangeEdit();
+};
+
+window.renumberRowsEdit = function () {
+    document.querySelectorAll('#bill-table tbody tr').forEach(function (row, i) {
+        const numCell = row.querySelector('.row-num') || row.cells[0];
+        if (numCell) numCell.textContent = i + 1;
     });
-    var html = `
-    <html>
-    <body>
-    ` + printBillHead() +
-        `
-      <div class="header">
-        <h2>Mahna Vouge</h2>
-        <div>Block B 48 Ext. Pak-Arab Housing Scheme Lahore Pakistan</div>
-        <div>+92 317 4038 019</div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Product</th>
-            <th>Price</th>
-            <th>Qty</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-          <tr class="total-row">
-            <td colspan="4">Final Bill</td>
-            <td>${finalBill}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="footer">
-        <div>Thank you for your purchase!</div>
-        <div>Date: ${new Date().toLocaleString()}</div>
-        <div>______________________</div>
-      </div>
-    </body>
-    </html>
-  `;
-    const win = window.open("", "PRINT", "height=600,width=800");
-    win.document.write(html);
-    win.document.close();
-    win.print();
-    w.onafterprint = () => w.close();
-}
+};
+
+window.calculateFinalBillEdit = function () {
+    let total = 0;
+    document.querySelectorAll('#bill-table tbody tr').forEach(function (row) {
+        const lineTotalEl = row.querySelector('.line-total');
+        const taxEl = row.querySelector('.tax');
+        const priceEl = row.querySelector('.price');
+        const qtyEl = row.querySelector('.qty');
+
+        if (lineTotalEl && lineTotalEl.textContent) {
+            total += parseFloat(lineTotalEl.textContent) || 0;
+        } else if (priceEl && qtyEl) {
+            const price = parseFloat(priceEl.textContent) || 0;
+            const qty = parseFloat(qtyEl.textContent) || 0;
+            const subtotal = price * qty;
+            const tax = subtotal * 0.12;
+            const lineTotal = subtotal + tax;
+
+            if (taxEl) taxEl.textContent = tax.toFixed(2);
+            if (lineTotalEl) lineTotalEl.textContent = lineTotal.toFixed(2);
+
+            total += lineTotal;
+        }
+    });
+    const finalBillSpan = document.getElementById('final-bill');
+    if (finalBillSpan) {
+        finalBillSpan.textContent = total.toFixed(2);
+    }
+    return total;
+};
+
+window.recalculateChangeEdit = function () {
+    const finalBillSpan = document.getElementById('final-bill');
+    const amountReceived = document.getElementById('amount-received');
+    const changeGiven = document.getElementById('change-given');
+    if (!finalBillSpan || !amountReceived || !changeGiven) return;
+
+    const total = parseFloat(finalBillSpan.textContent) || 0;
+    const received = parseFloat(amountReceived.value) || 0;
+    changeGiven.value = (received - total).toFixed(2);
+};
+
+window.validateProductForBillEdit = function () {
+    const barcodeInput = document.getElementById('barcode');
+    const barcode = barcodeInput.value.trim();
+    if (!barcode || barcode.length < 5) {
+        alert('Please enter at least 5 digits.');
+        return;
+    }
+    addProductEdit(barcode);
+    barcodeInput.value = '';
+};
+
+window.addProductEdit = function (barcode) {
+    fetch('model/ajax.php?action=get_product&barcode=' + encodeURIComponent(barcode))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (!data || !data.success) {
+                alert(data && data.message ? data.message : 'Product not found.');
+                return;
+            }
+            const tbody = document.querySelector('#bill-table tbody');
+            let exists = false;
+            tbody.querySelectorAll('tr').forEach(function (row) {
+                const pidEl = row.querySelector('.product-id');
+                if (pidEl && pidEl.textContent.trim() == data.product_id) {
+                    const qtyEl = row.querySelector('.qty');
+                    const taxEl = row.querySelector('.tax');
+                    const lineTotalEl = row.querySelector('.line-total');
+                    const priceEl = row.querySelector('.price');
+
+                    let qty = (parseFloat(qtyEl.textContent) || 0) + 1;
+                    qtyEl.textContent = qty;
+
+                    const price = parseFloat(priceEl.textContent) || 0;
+                    const subtotal = price * qty;
+                    const tax = subtotal * 0.12;
+                    const lineTotal = subtotal + tax;
+
+                    taxEl.textContent = tax.toFixed(2);
+                    lineTotalEl.textContent = lineTotal.toFixed(2);
+
+                    exists = true;
+                }
+            });
+            if (!exists) {
+                const rowCount = tbody.querySelectorAll('tr').length;
+                const price = parseFloat(data.price) || 0;
+                const subtotal = price * 1;
+                const tax = subtotal * 0.12;
+                const lineTotal = subtotal + tax;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="row-num">' + (rowCount + 1) + '</td>' +
+                    '<td hidden class="product-id">' + data.product_id + '</td>' +
+                    '<td class="product-name">' + data.product_name + '</td>' +
+                    '<td class="price">' + data.price + '</td>' +
+                    '<td class="qty">1</td>' +
+                    '<td class="tax">' + tax.toFixed(2) + '</td>' +
+                    '<td class="line-total">' + lineTotal.toFixed(2) + '</td>' +
+                    '<td><button class="btn btn-danger btn-sm" onclick="removeRowEdit(this)">Remove</button></td>';
+                tbody.appendChild(tr);
+            }
+            calculateFinalBillEdit();
+            recalculateChangeEdit();
+        })
+        .catch(function (err) {
+            alert('Error fetching product: No Product Found');
+        });
+};
+
+window.saveSaleEdit = function () {
+    const saleId = document.getElementById('sale-id').value;
+    const rows = document.querySelectorAll('#bill-table tbody tr');
+    if (rows.length === 0) {
+        alert('Cannot update an empty bill.');
+        return;
+    }
+
+    const items = [];
+    const productQtyMap = {};
+    rows.forEach(function (row) {
+        const productId = row.querySelector('.product-id').textContent.trim();
+        const productName = row.querySelector('.product-name').textContent.trim();
+        const price = parseFloat(row.querySelector('.price').textContent) || 0;
+        const qty = parseFloat(row.querySelector('.qty').textContent) || 0;
+        const tax = parseFloat(row.querySelector('.tax').textContent) || 0;
+        const total = parseFloat(row.querySelector('.line-total').textContent) || 0;
+        items.push({
+            product_id: productId,
+            product_name: productName,
+            price: price,
+            qty: qty,
+            tax: tax,
+            total: total
+        });
+        productQtyMap[productId] = qty;
+    });
+
+    const finalBill = parseFloat(document.getElementById('final-bill').textContent) || 0;
+    const paymentMethodEl = document.querySelector('input[name="payment-method"]:checked');
+    const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'cash';
+    const amountReceivedInput = document.getElementById('amount-received');
+    const amountReceived = amountReceivedInput ? (parseFloat(amountReceivedInput.value) || 0) : 0;
+    const changeGivenInput = document.getElementById('change-given');
+    const changeGiven = changeGivenInput ? (parseFloat(changeGivenInput.value) || 0) : 0;
+
+    const formData = new FormData();
+    formData.append('sale_id', saleId);
+    formData.append('rows', JSON.stringify(items));
+    formData.append('productQtyMap', JSON.stringify(productQtyMap));
+    formData.append('final_bill', finalBill);
+    formData.append('payment_method', paymentMethod);
+    formData.append('amount_received', amountReceived);
+    formData.append('change_given', changeGiven);
+
+    fetch('model/ajax.php?action=update_bill', {
+        method: 'POST',
+        body: formData
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.success) {
+                alert('Sale updated successfully.');
+                window.location.href = 'sales.php';
+            } else {
+                alert(data.message || 'Failed to update sale.');
+            }
+        })
+        .catch(function (err) {
+            console.log(err.message)
+            alert('Error: ' + err.message);
+        });
+};
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    calculateFinalBillEdit();
+    recalculateChangeEdit();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    function toggleCashSection() {
+        const checked = document.querySelector('input[name="payment-method"]:checked');
+        const cashSection = document.getElementById('cash-section');
+        const actionButtons = document.getElementById('action-buttons');
+        if (checked && checked.value === 'cash') {
+            cashSection.style.display = 'flex';
+        } else {
+            cashSection.style.display = 'none';
+        }
+        if (checked) {
+            actionButtons.style.display = 'flex';
+        }
+    }
+
+    document.querySelectorAll('input[name="payment-method"]').forEach(function (radio) {
+        radio.addEventListener('change', toggleCashSection);
+    });
+
+    const amountReceivedInput = document.getElementById('amount-received');
+    if (amountReceivedInput) {
+        amountReceivedInput.addEventListener('input', recalculateChangeEdit);
+    }
+
+    toggleCashSection();
+    calculateFinalBillEdit();
+});
 
 function printBarcode(barcode, name, price) {
     var printWindow = window.open('', '_blank', 'width=800,height=600');
@@ -531,55 +799,9 @@ function printBarcode(barcode, name, price) {
     printWindow.document.write('<script>JsBarcode("#barcode", "' + barcode + '", { format: "CODE128", displayValue: true });</script>');
     printWindow.document.write('</body></html>');
     printWindow.document.close();
-    // Give it a split second to render the SVG before printing
     setTimeout(function() {
         printWindow.print();
     }, 500);
-}
-
-function printAnyLabel(items, finalBill) {
-    const labelTextEl = document.getElementById('print-label-text');
-    if (labelTextEl.value == "") {
-        alert("Nothing to print")
-        return;
-    }
-    const html = `
-  <html>
-    <head>
-        <style>
-          @page {
-            size: 2in 1in;
-            margin: 0;
-          }
-          body {
-            font-family: Arial, sans-serif;
-            width: 100%;
-            margin: 0 auto;
-            padding: 0;
-          }
-          .header, .footer {
-            text-align: center;
-          }
-          .label {
-            width: 2in;
-            height: 1in;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 8px;
-          }
-        </style>
-    </head>
-    <body>
-        <div class="label" style="font-size: small"><h1><b>${labelTextEl.value.toUpperCase()}</b></h1></div>
-    </body>
-    </html>
-  `;
-    const w = window.open("", "PRINT", "width=600,height=800");
-    w.document.write(html);
-    w.document.close();
-    w.print();
-    w.onafterprint = () => w.close();
 }
 
 function validateUserLogin() {
@@ -611,7 +833,6 @@ function validateHeroSection() {
     const heroButtonText = document.getElementById('hero-button-text');
     const heroBgImage = document.getElementById('hero-bg-image');
 
-    // Check if an image is already displayed on the page
     const hasExistingImage = document.querySelector('img[alt="Current Background"]') !== null;
 
     if (!checkEmptyInput(heroPretitle, "Enter the pre-title")) return;
@@ -619,7 +840,6 @@ function validateHeroSection() {
     if (!checkEmptyInput(heroDescription, "Enter the description")) return;
     if (!checkEmptyInput(heroButtonText, "Enter the button text")) return;
 
-    // Only validate if there is NO existing image AND the user hasn't selected a new one
     if (!hasExistingImage && heroBgImage.files.length === 0) {
         alert("Select a background image");
         return;
@@ -631,7 +851,6 @@ function validateHeroSection() {
     formData.append('description', heroDescription.value);
     formData.append('button_text', heroButtonText.value);
 
-    // Only append image if a new one was selected
     if (heroBgImage.files.length > 0) {
         formData.append('bg_image', heroBgImage.files[0]);
     }
@@ -642,6 +861,7 @@ function validateHeroSection() {
         "edit_home_page.php"
     );
 }
+
 function validateCollectionSection() {
     const mensPretitle   = document.getElementById('coll-mens-pretitle');
     const mensTitle      = document.getElementById('coll-mens-title');
@@ -792,7 +1012,6 @@ function validateContactSection() {
     if (!checkEmptyInput(contactEmail,    "Enter the email address")) return;
     if (!checkEmptyInput(contactPhone,    "Enter the contact number")) return;
 
-    // Basic email format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(contactEmail.value.trim())) {
         alert("Enter a valid email address");

@@ -204,35 +204,138 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_to_bill') {
 }
 if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
     ob_clean();
+
+    // Get POST data
     $productQtyMap = json_decode($_POST['productQtyMap'], true);
     $rows = json_decode($_POST['rows'], true);
-    $rows = mysqli_real_escape_string($conn, json_encode($rows));
-    $finalBill = mysqli_real_escape_string($conn, $_POST['final_bill']);
-    $userName = $_SESSION['name'];
+    $finalBill = $_POST['finalBill'];
+    $paymentMethod = mysqli_real_escape_string($conn, $_POST['paymentMethod']);
+    $amountReceived = isset($_POST['amountReceived']) ? $_POST['amountReceived'] : 0;
+    $changeGiven = isset($_POST['changeGiven']) ? $_POST['changeGiven'] : 0;
+    $createdBy = $_SESSION['username'];
+
+    // Encode rows (includes product_id, product_name, price, qty, tax, total)
+    $itemsJson = json_encode($rows);
+
+    // Start transaction
     $conn->begin_transaction();
+
     try {
-        $newCategoryInsertQuery = "INSERT INTO `sales`(`items`, `final_bill`, `created_by`) 
-                               VALUES ('$rows', '$finalBill', '$userName')";
-        if (!$conn->query($newCategoryInsertQuery)) {
-            throw new Exception("Error saving bill: " . $conn->error);
+        // Insert sale record
+        $sql = "INSERT INTO sales (items, final_bill, payment_method, amount_received, change_given, created_by) 
+                VALUES ('$itemsJson', '$finalBill', '$paymentMethod', '$amountReceived', '$changeGiven', '$createdBy')";
+
+        if (!$conn->query($sql)) {
+            throw new Exception("Error saving sale: " . $conn->error);
         }
-        foreach ($productQtyMap as $product_id => $qty) {
-            $product_id = mysqli_real_escape_string($conn, $product_id);
-            $qty = (int)$qty;
-            $productUpdateQuery = "UPDATE `products` 
-                               SET `qty` = GREATEST(`qty` - $qty, 0) 
-                               WHERE `product_id` = '$product_id'";
-            if (!$conn->query($productUpdateQuery)) {
-                throw new Exception("Error updating product: $product_id - " . $conn->error);
+
+        // Update product quantities
+        foreach ($productQtyMap as $productId => $qty) {
+            $productId = mysqli_real_escape_string($conn, $productId);
+            $qty = intval($qty);
+
+            $updateSql = "UPDATE products SET qty = GREATEST(qty - $qty, 0) WHERE product_id = '$productId'";
+
+            if (!$conn->query($updateSql)) {
+                throw new Exception("Error updating product quantity: " . $conn->error);
             }
         }
+
+        // Commit transaction
         $conn->commit();
-        echo "Bill has been saved successfully.";
+        echo json_encode(['success' => true, 'message' => 'Bill saved successfully!']);
+
     } catch (Exception $e) {
+        // Rollback on error
         $conn->rollback();
-        echo "Some error occurred while saving bill.";
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
+
+    exit;
 }
+if (isset($_GET['action']) && $_GET['action'] == 'update_bill') {
+    ob_clean();
+
+    // Get POST data
+    $saleId = intval($_POST['sale_id']);
+    $rows = json_decode($_POST['rows'], true);
+    $productQtyMap = json_decode($_POST['productQtyMap'], true);
+    $finalBill = $_POST['finalBill'];
+    $paymentMethod = mysqli_real_escape_string($conn, $_POST['paymentMethod']);
+    $amountReceived = isset($_POST['amountReceived']) ? $_POST['amountReceived'] : 0;
+    $changeGiven = isset($_POST['changeGiven']) ? $_POST['changeGiven'] : 0;
+
+    // Encode rows (includes product_id, product_name, price, qty, tax, total)
+    $itemsJson = json_encode($rows);
+
+    // Start transaction
+    $conn->begin_transaction();
+
+    try {
+        // Get old items to calculate stock difference
+        $oldSaleQuery = "SELECT items FROM sales WHERE sale_id = $saleId";
+        $oldSaleResult = $conn->query($oldSaleQuery);
+
+        if (!$oldSaleResult || $oldSaleResult->num_rows == 0) {
+            throw new Exception("Sale not found");
+        }
+
+        $oldSale = $oldSaleResult->fetch_assoc();
+        $oldItems = json_decode($oldSale['items'], true);
+
+        // Create map of old quantities
+        $oldQtyMap = [];
+        foreach ($oldItems as $item) {
+            $oldQtyMap[$item['product_id']] = $item['qty'];
+        }
+
+        // Update sale record
+        $updateSql = "UPDATE sales SET 
+                      items = '$itemsJson', 
+                      final_bill = '$finalBill',
+                      payment_method = '$paymentMethod',
+                      amount_received = '$amountReceived',
+                      change_given = '$changeGiven'
+                      WHERE sale_id = $saleId";
+
+        if (!$conn->query($updateSql)) {
+            throw new Exception("Error updating sale: " . $conn->error);
+        }
+
+        // Update product quantities based on difference
+        foreach ($productQtyMap as $productId => $newQty) {
+            $productId = mysqli_real_escape_string($conn, $productId);
+            $newQty = intval($newQty);
+            $oldQty = isset($oldQtyMap[$productId]) ? intval($oldQtyMap[$productId]) : 0;
+
+            // Calculate difference
+            $diff = $oldQty - $newQty;
+
+            if ($diff != 0) {
+                // If diff > 0: we're adding stock back (reducing sale qty)
+                // If diff < 0: we're removing more stock (increasing sale qty)
+                $updateQtySql = "UPDATE products SET qty = qty + $diff WHERE product_id = '$productId'";
+
+                if (!$conn->query($updateQtySql)) {
+                    throw new Exception("Error updating product quantity: " . $conn->error);
+                }
+            }
+        }
+
+        // Commit transaction
+        $conn->commit();
+        echo json_encode(['success' => true, 'message' => 'Bill updated successfully!']);
+
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+
+    exit;
+}
+
+
 if (isset($_GET['action']) && $_GET['action'] == 'print_bill') {
     ob_clean();
     $rows = json_decode($_POST['rows'], true);
