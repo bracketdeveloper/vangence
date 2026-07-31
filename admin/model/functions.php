@@ -23,7 +23,6 @@ function getAllCategories($conn)
 
     return runSelectQuery($conn, $query);
 }
-
 function getCategoryById($conn, $categoryId)
 {
     $query = "
@@ -38,8 +37,7 @@ function getCategoryById($conn, $categoryId)
 
     return runSelectQuery($conn, $query);
 }
-
-function getAllProducts($conn)
+function getAllProductsforAdmin($conn)
 {
     $query = "SELECT p.*, c.category AS category_name 
               FROM `products` p 
@@ -47,13 +45,29 @@ function getAllProducts($conn)
               ORDER BY p.`created_at` DESC";
     return runSelectQuery($conn, $query);
 }
-
-function getProductById($conn, $productId)
+function getAllProducts($conn)
+{
+    $query = "SELECT p.*, c.category AS category_name 
+              FROM `products` p 
+              LEFT JOIN `categories` c ON p.category_id = c.category_id 
+              WHERE p.`is_active` = 1
+              ORDER BY p.`created_at` DESC";
+    return runSelectQuery($conn, $query);
+}
+function getProductByIdforAdmin($conn, $productId)
 {
     $query = "SELECT p.*, c.category AS category_name 
               FROM `products` p 
               LEFT JOIN `categories` c ON p.category_id = c.category_id 
               WHERE p.`product_id` = '$productId'";
+    return runSelectQuery($conn, $query);
+}
+function getProductById($conn, $productId)
+{
+    $query = "SELECT p.*, c.category AS category_name 
+              FROM `products` p 
+              LEFT JOIN `categories` c ON p.category_id = c.category_id 
+              WHERE p.`product_id` = '$productId' AND p.`is_active` = 1";
     return runSelectQuery($conn, $query);
 }
 function getProductByName($conn, $productName)
@@ -66,8 +80,6 @@ function getProductByName($conn, $productName)
 }
 function getProductsByHierarchy($conn, $category_id)
 {
-    // This query finds the parent, its children, and grandchildren recursively,
-    // then joins the products table to get all items in that tree.
     $query = "WITH RECURSIVE CategoryTree AS (
         SELECT category_id FROM categories WHERE category_id = ?
         UNION ALL
@@ -78,6 +90,7 @@ function getProductsByHierarchy($conn, $category_id)
     FROM products p
     JOIN CategoryTree ct ON p.category_id = ct.category_id
     JOIN categories c ON p.category_id = c.category_id
+    WHERE p.is_active = 1
     ORDER BY p.created_at DESC";
 
     $stmt = $conn->prepare($query);
@@ -85,15 +98,15 @@ function getProductsByHierarchy($conn, $category_id)
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
+
 function getMaxPrice($conn, $selectedId = 0) {
     if ($selectedId <= 0) {
-        $query = "SELECT MAX(selling_price) AS max_price FROM products";
+        $query = "SELECT MAX(selling_price) AS max_price FROM products WHERE is_active = 1";
     } else {
-        // Get all category IDs including the parent and all descendants
         $allCategoryIds = getAllChildCategoryIds($conn, $selectedId);
         $idList = implode(',', array_map('intval', $allCategoryIds));
 
-        $query = "SELECT MAX(selling_price) AS max_price FROM products WHERE category_id IN ($idList)";
+        $query = "SELECT MAX(selling_price) AS max_price FROM products WHERE category_id IN ($idList) AND is_active = 1";
     }
 
     $result = runSelectQuery($conn, $query);
@@ -102,31 +115,31 @@ function getMaxPrice($conn, $selectedId = 0) {
             ? floatval($result[0]['max_price'])
             : 200.00;
 }
+
 function getMinPrice($conn, $selectedId = 0) {
     if ($selectedId <= 0) {
-        $query = "SELECT MIN(selling_price) AS min_price FROM products";
+        $query = "SELECT MIN(selling_price) AS min_price FROM products WHERE is_active = 1";
     } else {
-        // Use the same recursive helper function created for getMaxPrice
         $allCategoryIds = getAllChildCategoryIds($conn, $selectedId);
         $idList = implode(',', array_map('intval', $allCategoryIds));
 
-        $query = "SELECT MIN(selling_price) AS min_price FROM products WHERE category_id IN ($idList)";
+        $query = "SELECT MIN(selling_price) AS min_price FROM products WHERE category_id IN ($idList) AND is_active = 1";
     }
 
     $result = runSelectQuery($conn, $query);
 
-    // Default to 0.00 if no products found
     return ($result && isset($result[0]['min_price']) && $result[0]['min_price'] !== null)
             ? floatval($result[0]['min_price'])
             : 0.00;
 }
+
 function getAvailableSizesForCategory($conn, $selectedId = 0) {
     if ($selectedId > 0) {
         $allCategoryIds = getAllChildCategoryIds($conn, $selectedId);
         $idList = implode(',', array_map('intval', $allCategoryIds));
-        $query = "SELECT sizes FROM products WHERE category_id IN ($idList) AND sizes IS NOT NULL AND sizes != ''";
+        $query = "SELECT sizes FROM products WHERE category_id IN ($idList) AND sizes IS NOT NULL AND sizes != '' AND is_active = 1";
     } else {
-        $query = "SELECT sizes FROM products WHERE sizes IS NOT NULL AND sizes != ''";
+        $query = "SELECT sizes FROM products WHERE sizes IS NOT NULL AND sizes != '' AND is_active = 1";
     }
 
     $result = runSelectQuery($conn, $query);
@@ -146,9 +159,9 @@ function getAvailableColorsForCategory($conn, $selectedId = 0) {
     if ($selectedId > 0) {
         $allCategoryIds = getAllChildCategoryIds($conn, $selectedId);
         $idList = implode(',', array_map('intval', $allCategoryIds));
-        $query = "SELECT colors FROM products WHERE category_id IN ($idList) AND colors IS NOT NULL AND colors != ''";
+        $query = "SELECT colors FROM products WHERE category_id IN ($idList) AND colors IS NOT NULL AND colors != '' AND is_active = 1";
     } else {
-        $query = "SELECT colors FROM products WHERE colors IS NOT NULL AND colors != ''";
+        $query = "SELECT colors FROM products WHERE colors IS NOT NULL AND colors != '' AND is_active = 1";
     }
 
     $result = runSelectQuery($conn, $query);
@@ -287,11 +300,13 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
     $images = json_decode($product['image'], true);
     $displayImage = (is_array($images) && count($images) > 0) ? $images[0] : 'default.jpg';
 
-    // Decode sizes and colors for the Add to Cart button
-    $sizes = json_decode($product['sizes'], true);
-    $colors = json_decode($product['colors'], true);
-    $firstSize = is_array($sizes) ? $sizes[0] : 'N/A';
-    $firstColor = is_array($colors) ? $colors[0] : 'N/A';
+    // Decode sizes and colors for the Add to Cart button / quick-add modal
+    $sizesDecoded = json_decode($product['sizes'], true);
+    $colorsDecoded = json_decode($product['colors'], true);
+    $sizes = is_array($sizesDecoded) ? array_values($sizesDecoded) : [];
+    $colors = is_array($colorsDecoded) ? array_values($colorsDecoded) : [];
+    $firstSize = !empty($sizes) ? $sizes[0] : 'N/A';
+    $firstColor = !empty($colors) ? $colors[0] : 'N/A';
 
     ?>
     <div class="<?php echo $colClass; ?> mb-4 d-flex">
@@ -322,8 +337,10 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                             data-name="<?php echo htmlspecialchars($product['product_name']); ?>"
                             data-price="<?php echo $product['selling_price']; ?>"
                             data-image="<?php echo $displayImage; ?>"
-                            data-size="<?php echo $firstSize; ?>"
-                            data-color="<?php echo $firstColor; ?>"
+                            data-size="<?php echo htmlspecialchars($firstSize); ?>"
+                            data-color="<?php echo htmlspecialchars($firstColor); ?>"
+                            data-sizes='<?php echo htmlspecialchars(json_encode($sizes), ENT_QUOTES, "UTF-8"); ?>'
+                            data-colors='<?php echo htmlspecialchars(json_encode($colors), ENT_QUOTES, "UTF-8"); ?>'
                             style="font-size: 0.75rem; letter-spacing: 0.5px; padding: 6px 12px;">
                         <i class="fas fa-cart-plus"></i>
                     </button>

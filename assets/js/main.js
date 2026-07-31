@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const parent = this.closest('.color-selector');
             parent.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             this.classList.add('active');
-            
+
             // If we are on product page, update button attributes or hidden input
             if (this.dataset.colorName) {
                 const addToCartBtn = document.querySelector('.btn-add-to-cart-detail');
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const parent = this.closest('.size-grid');
             parent.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            
+
             // If we are on product page, update button attributes or hidden input
             if (this.dataset.sizeValue) {
                 const addToCartBtn = document.querySelector('.btn-add-to-cart-detail');
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateCartBadge() {
         const badges = document.querySelectorAll('.cart-badge');
         const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-        
+
         badges.forEach(badge => {
             if (totalItems > 0) {
                 badge.textContent = totalItems;
@@ -179,14 +179,14 @@ document.addEventListener('DOMContentLoaded', function () {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(10px)';
         toast.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-        
+
         toast.innerHTML = `
             <span>${message}</span>
             <a href="cart.php" style="color: #FFFFFF; text-decoration: underline; font-weight: 600;">View Cart</a>
         `;
 
         document.body.appendChild(toast);
-        
+
         // Trigger animation
         setTimeout(() => {
             toast.style.opacity = '1';
@@ -222,19 +222,132 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Setup Event Listeners for "Add to Cart" Buttons on Home & Shop page
     document.body.addEventListener('click', function (e) {
-        if (e.target && e.target.classList.contains('btn-add-to-cart')) {
+        const btn = e.target.closest('.btn-add-to-cart');
+        if (btn) {
             e.preventDefault();
-            const btn = e.target;
             const id = btn.dataset.id;
             const name = btn.dataset.name;
             const price = btn.dataset.price;
             const image = btn.dataset.image;
-            const size = btn.dataset.size || 'M';
-            const color = btn.dataset.color || 'Navy';
-            
-            addToCart(id, name, price, image, size, color, 1);
+
+            let sizes = [];
+            let colors = [];
+            try { sizes = JSON.parse(btn.dataset.sizes || '[]'); } catch (err) { sizes = []; }
+            try { colors = JSON.parse(btn.dataset.colors || '[]'); } catch (err) { colors = []; }
+            sizes = sizes.filter(s => s && s !== 'N/A');
+            colors = colors.filter(c => c && c !== 'N/A');
+
+            if (sizes.length > 1 || colors.length > 1) {
+                openQuickAddModal({ id, name, price, image, sizes, colors });
+            } else {
+                const size = sizes[0] || btn.dataset.size || 'M';
+                const color = colors[0] || btn.dataset.color || 'Navy';
+                addToCart(id, name, price, image, size, color, 1);
+            }
         }
     });
+
+    // ----------------------------------------------------
+    // Quick Add Modal (size/color selection for grid Add to Cart)
+    // ----------------------------------------------------
+    const quickAddModalEl = document.getElementById('quickAddModal');
+    const quickAddModal = (quickAddModalEl && window.bootstrap) ? new bootstrap.Modal(quickAddModalEl) : null;
+    let quickAddPending = null;
+
+    function openQuickAddModal(product) {
+        if (!quickAddModal) {
+            // Modal markup isn't present on this page - fall back to adding with the first options
+            const size = product.sizes[0] || 'M';
+            const color = product.colors[0] || 'Navy';
+            addToCart(product.id, product.name, product.price, product.image, size, color, 1);
+            return;
+        }
+
+        quickAddPending = {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            selectedSize: product.sizes[0] || 'M',
+            selectedColor: product.colors[0] || 'Navy'
+        };
+
+        const imgEl = document.getElementById('quickAddImage');
+        const nameEl = document.getElementById('quickAddName');
+        const priceEl = document.getElementById('quickAddPrice');
+        if (imgEl) imgEl.src = 'admin/uploads/' + product.image;
+        if (nameEl) nameEl.textContent = product.name;
+        if (priceEl) priceEl.textContent = 'PKR ' + (parseFloat(product.price) || 0).toFixed(2);
+
+        const sizeGroup = document.getElementById('quickAddSizeGroup');
+        const sizeOptions = document.getElementById('quickAddSizeOptions');
+        if (sizeGroup && sizeOptions) {
+            sizeOptions.innerHTML = '';
+            if (product.sizes.length > 1) {
+                sizeGroup.style.display = '';
+                product.sizes.forEach(function (sz, idx) {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'size-btn d-flex align-items-center justify-content-center' + (idx === 0 ? ' active' : '');
+                    b.textContent = sz;
+                    b.addEventListener('click', function () {
+                        sizeOptions.querySelectorAll('.size-btn').forEach(el => el.classList.remove('active'));
+                        b.classList.add('active');
+                        quickAddPending.selectedSize = sz;
+                    });
+                    sizeOptions.appendChild(b);
+                });
+            } else {
+                sizeGroup.style.display = 'none';
+            }
+        }
+
+        const colorGroup = document.getElementById('quickAddColorGroup');
+        const colorOptions = document.getElementById('quickAddColorOptions');
+        const colorNameLabel = document.getElementById('quickAddColorName');
+        if (colorGroup && colorOptions) {
+            colorOptions.innerHTML = '';
+            if (product.colors.length > 1) {
+                colorGroup.style.display = '';
+                if (colorNameLabel) colorNameLabel.textContent = product.colors[0];
+                product.colors.forEach(function (col, idx) {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'quick-add-color-swatch' + (idx === 0 ? ' active' : '');
+                    swatch.style.backgroundColor = col;
+                    swatch.title = col;
+                    swatch.addEventListener('click', function () {
+                        colorOptions.querySelectorAll('.quick-add-color-swatch').forEach(el => el.classList.remove('active'));
+                        swatch.classList.add('active');
+                        quickAddPending.selectedColor = col;
+                        if (colorNameLabel) colorNameLabel.textContent = col;
+                    });
+                    colorOptions.appendChild(swatch);
+                });
+            } else {
+                colorGroup.style.display = 'none';
+            }
+        }
+
+        quickAddModal.show();
+    }
+
+    const quickAddConfirmBtn = document.getElementById('quickAddConfirmBtn');
+    if (quickAddConfirmBtn) {
+        quickAddConfirmBtn.addEventListener('click', function () {
+            if (!quickAddPending) return;
+            addToCart(
+                quickAddPending.id,
+                quickAddPending.name,
+                quickAddPending.price,
+                quickAddPending.image,
+                quickAddPending.selectedSize,
+                quickAddPending.selectedColor,
+                1
+            );
+            quickAddModal.hide();
+            quickAddPending = null;
+        });
+    }
 
     // Setup Event Listener for Product Detail Add to Cart Button
     const detailAddToCartBtn = document.querySelector('.btn-add-to-cart-detail');
@@ -245,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const name = this.dataset.name;
             const price = this.dataset.price;
             const image = this.dataset.image;
-            
+
             // Get selected size
             const activeSizeBtn = document.querySelector('.size-grid .size-btn.active');
             const size = activeSizeBtn ? activeSizeBtn.dataset.sizeValue : (this.dataset.size || 'M');
@@ -266,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // 5. CART PAGE DYNAMIC RENDERER
     // ----------------------------------------------------
     const cartPageContainer = document.getElementById('cart-page-container');
-    
+
     function renderCartPage() {
         if (!cartPageContainer) return;
 

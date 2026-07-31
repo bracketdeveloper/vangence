@@ -194,6 +194,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_product') {
         echo "An error occurred while deleting product.";
     }
 }
+if (isset($_GET['action']) && $_GET['action'] == 'toggle_product_status') {
+    ob_clean();
+    $productId = mysqli_real_escape_string($conn, $_POST['product_id']);
+    $isActive = (isset($_POST['is_active']) && $_POST['is_active'] == '1') ? 1 : 0;
+    $updateQuery = "UPDATE `products` SET `is_active` = '$isActive' WHERE `product_id` = '$productId'";
+    if ($conn->query($updateQuery) === TRUE) {
+        echo "Product status updated successfully.";
+    } else {
+        echo "An error occurred while updating product status.";
+    }
+}
 if (isset($_GET['action']) && $_GET['action'] == 'add_to_bill') {
     ob_clean();
     header('Content-Type: application/json');

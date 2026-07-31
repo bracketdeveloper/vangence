@@ -367,6 +367,30 @@ function validateDeleteProduct(productId) {
     }
 }
 
+function toggleProductStatus(checkbox, productId) {
+    let newStatus = checkbox.checked ? 1 : 0;
+    let formData = new FormData();
+    formData.append('product_id', productId);
+    formData.append('is_active', newStatus);
+
+    $.ajax({
+        url: 'model/ajax.php?action=toggle_product_status',
+        type: 'POST',
+        contentType: false,
+        processData: false,
+        data: formData
+    }).done(function (response) {
+        console.log(response);
+        if (response.trim() !== "Product status updated successfully.") {
+            alert(response);
+            checkbox.checked = !checkbox.checked;
+        }
+    }).fail(function () {
+        alert("Something went wrong while updating product status.");
+        checkbox.checked = !checkbox.checked;
+    });
+}
+
 function validateNewUser() {
     const nameEl = document.getElementById('name');
     const emailEl = document.getElementById('email');
@@ -1311,4 +1335,3 @@ function printCurrentBill() {
         change_given:    changeGiven
     });
 }
-

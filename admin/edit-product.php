@@ -3,7 +3,7 @@
 <?php
 require_once("model/functions.php");
 $product_id = $_GET['product_id'];
-$product = getProductById($conn, $product_id);
+$product = getProductByIdforAdmin($conn, $product_id);
 if ($product == null) {
     echo "<script>alert('Invalid request');
           window.location.href= 'products.php'</script>";

@@ -8,7 +8,7 @@ if (!isset($_GET['product_id'])) {
     exit;
 }
 $product_id = $_GET['product_id'];
-$product = getProductById($conn, $product_id);
+$product = getProductByIdforAdmin($conn, $product_id);
 if (!$product) {
     echo "<script>alert('Product not found'); window.location.href='products.php';</script>";
     exit;

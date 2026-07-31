@@ -1,7 +1,7 @@
 <?php require_once("includes/head.php"); ?>
 <?php
 require_once("model/functions.php");
-$allProducts = getAllProducts($conn);
+$allProducts = getAllProductsforAdmin($conn);
 ?>
     <!-- Page Wrapper -->
     <div id="wrapper">
@@ -43,6 +43,7 @@ $allProducts = getAllProducts($conn);
                                         <th>Product Name</th>
                                         <th>Category</th> <th>Price</th>
                                         <th>Product Image</th>
+                                        <th>Live on Web</th>
                                         <th>Print Barcode</th>
                                         <?php if ($_SESSION['role'] == 'admin'): ?>
                                             <th>Product Details</th>
@@ -58,30 +59,41 @@ $allProducts = getAllProducts($conn);
                                         $firstImage = !empty($images) ? $images[0] : 'no-image.png';
                                         ?>
                                         <tr>
-                                        <td><?php echo htmlspecialchars($product['product_id']); ?></td>
-                                        <td><?php echo htmlspecialchars($product['product_name']); ?></td>
-                                        <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
-                                        <td><img src="uploads/<?php echo htmlspecialchars($firstImage); ?>"
-                                                 alt="Product Image"
-                                                 style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
-                                        </td>
-                                        <td><button class="btn btn-dark" onclick="printBarcode(
-                                                    '<?php echo $product['barcode']; ?>',
-                                                    '<?php echo htmlspecialchars($product['product_name']); ?>',
-                                                    '<?php echo $product['selling_price']; ?>'
-                                                    )">Print</button></td>
-                                        <?php if ($_SESSION['role'] == 'admin'): ?>
-                                        <td>
-                                            <a href="product-details.php?product_id=<?php echo $product['product_id']; ?>"
-                                               class="btn btn-info">Details</a></td>
-                                        <td>
-                                            <a href="edit-product.php?product_id=<?php echo $product['product_id']; ?>"
-                                               class="btn btn-success">Edit</a></td>
-                                        <td>
-                                            <a onclick="return validateDeleteProduct('<?php echo $product['product_id']; ?>')"
-                                               class="btn btn-danger">Delete</a></td>
+                                            <td><?php echo htmlspecialchars($product['product_id']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['product_name']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
+                                            <td><img src="uploads/<?php echo htmlspecialchars($firstImage); ?>"
+                                                     alt="Product Image"
+                                                     style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
+                                            </td>
+                                            <?php $isActive = isset($product['is_active']) ? (int)$product['is_active'] : 1; ?>
+                                            <td>
+                                                <div class="custom-control custom-switch">
+                                                    <input type="checkbox" class="custom-control-input"
+                                                           id="status-<?php echo $product['product_id']; ?>"
+                                                            <?php echo $isActive ? 'checked' : ''; ?>
+                                                           onchange="toggleProductStatus(this, '<?php echo $product['product_id']; ?>')">
+                                                    <label class="custom-control-label" for="status-<?php echo $product['product_id']; ?>"></label>
+                                                </div>
+                                            </td>
+                                            <td><button class="btn btn-dark" onclick="printBarcode(
+                                                        '<?php echo $product['barcode']; ?>',
+                                                        '<?php echo htmlspecialchars($product['product_name']); ?>',
+                                                        '<?php echo $product['selling_price']; ?>'
+                                                        )">Print</button></td>
+                                            <?php if ($_SESSION['role'] == 'admin'): ?>
+
+                                                <td>
+                                                    <a href="product-details.php?product_id=<?php echo $product['product_id']; ?>"
+                                                       class="btn btn-info">Details</a></td>
+                                                <td>
+                                                    <a href="edit-product.php?product_id=<?php echo $product['product_id']; ?>"
+                                                       class="btn btn-success">Edit</a></td>
+                                                <td>
+                                                    <a onclick="return validateDeleteProduct('<?php echo $product['product_id']; ?>')"
+                                                       class="btn btn-danger">Delete</a></td>
+                                            <?php endif; ?>
                                         </tr>
-                                    <?php endif; ?>
                                     <?php endforeach; ?>
                                     </tbody>
                                 </table>

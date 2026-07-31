@@ -223,7 +223,73 @@ include 'includes/header.php';
                 </div>
             </form>
         </div>
-    </div><script>
+    </div><!-- Add to Cart - Size/Color Quick Select Modal -->
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-uppercase tracking-wider text-navy" id="quickAddModalLabel" style="font-size: 1rem;">Select Options</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <img id="quickAddImage" src="" alt="" style="width: 64px; height: 64px; object-fit: cover; border-radius: 6px;">
+                        <div>
+                            <div id="quickAddName" class="fw-semibold text-navy"></div>
+                            <div id="quickAddPrice" class="text-muted" style="font-size: 0.85rem;"></div>
+                        </div>
+                    </div>
+                    <div id="quickAddSizeGroup" class="mb-4">
+                        <span class="text-uppercase tracking-wider text-navy fw-semibold d-block mb-2" style="font-size: 0.75rem;">Select Size</span>
+                        <div id="quickAddSizeOptions" class="size-grid" style="max-width: 320px;"></div>
+                    </div>
+                    <div id="quickAddColorGroup" class="mb-2">
+                        <span class="text-uppercase tracking-wider text-navy fw-semibold d-block mb-2" style="font-size: 0.75rem;">
+                            Select Color: <span id="quickAddColorName" class="text-muted fw-normal text-capitalize"></span>
+                        </span>
+                        <div id="quickAddColorOptions" class="d-flex flex-wrap gap-3"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-navy w-100 text-uppercase py-2" id="quickAddConfirmBtn">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .quick-add-color-swatch {
+            display: inline-block;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #e2e2e2;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            position: relative;
+        }
+        .quick-add-color-swatch:hover {
+            transform: scale(1.08);
+        }
+        .quick-add-color-swatch.active {
+            border-color: #1b2a4a;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1b2a4a;
+        }
+        .quick-add-color-swatch.active::after {
+            content: "\2713";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 13px;
+            font-weight: bold;
+            color: #fff;
+            mix-blend-mode: difference;
+        }
+    </style>
+
+    <script>
         function updateQueryStringParameter(uri, key, value) {
             var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
             var separator = uri.indexOf('?') !== -1 ? "&" : "?";
