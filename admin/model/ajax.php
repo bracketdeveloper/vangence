@@ -204,18 +204,21 @@ if (isset($_GET['action']) && $_GET['action'] == 'add_to_bill') {
 }
 if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
     ob_clean();
+    header('Content-Type: application/json');
 
     // Get POST data
     $productQtyMap = json_decode($_POST['productQtyMap'], true);
-    $rows = json_decode($_POST['rows'], true);
-    $finalBill = $_POST['finalBill'];
-    $paymentMethod = mysqli_real_escape_string($conn, $_POST['paymentMethod']);
-    $amountReceived = isset($_POST['amountReceived']) ? $_POST['amountReceived'] : 0;
-    $changeGiven = isset($_POST['changeGiven']) ? $_POST['changeGiven'] : 0;
-    $createdBy = $_SESSION['username'];
+    $rows          = json_decode($_POST['rows'], true);
+    $finalBill     = $_POST['final_bill'];
+    $paymentMethod = mysqli_real_escape_string($conn, $_POST['payment_method']);
+    $amountReceived = isset($_POST['amount_received']) ? $_POST['amount_received'] : 0;
+    $changeGiven    = isset($_POST['change_given'])    ? $_POST['change_given']    : 0;
+    $printAfter     = isset($_POST['print_after'])     ? ($_POST['print_after'] === '1') : false;
+    $createdBy      = $_SESSION['name'];
 
     // Encode rows (includes product_id, product_name, price, qty, tax, total)
     $itemsJson = json_encode($rows);
+    $itemsEscaped = mysqli_real_escape_string($conn, $itemsJson);
 
     // Start transaction
     $conn->begin_transaction();
@@ -223,11 +226,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
     try {
         // Insert sale record
         $sql = "INSERT INTO sales (items, final_bill, payment_method, amount_received, change_given, created_by) 
-                VALUES ('$itemsJson', '$finalBill', '$paymentMethod', '$amountReceived', '$changeGiven', '$createdBy')";
+                VALUES ('$itemsEscaped', '$finalBill', '$paymentMethod', '$amountReceived', '$changeGiven', '$createdBy')";
 
         if (!$conn->query($sql)) {
             throw new Exception("Error saving sale: " . $conn->error);
         }
+
+        $saleId = $conn->insert_id;
 
         // Update product quantities
         foreach ($productQtyMap as $productId => $qty) {
@@ -243,12 +248,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'save_bill') {
 
         // Commit transaction
         $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Bill saved successfully!']);
+
+        // Build response — include all bill data needed for printing
+        echo json_encode([
+            'success'         => true,
+            'status'          => 'success',
+            'message'         => 'Bill saved successfully!',
+            'print'           => $printAfter,
+            'sale_id'         => $saleId,
+            'items'           => $rows,
+            'final_bill'      => $finalBill,
+            'payment_method'  => $paymentMethod,
+            'amount_received' => $amountReceived,
+            'change_given'    => $changeGiven,
+        ]);
 
     } catch (Exception $e) {
         // Rollback on error
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'status' => 'error', 'message' => $e->getMessage()]);
     }
 
     exit;

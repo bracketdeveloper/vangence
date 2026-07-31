@@ -46,22 +46,22 @@ $items = json_decode($sale['items'], true);
                                         <span class="text-muted">#<?php echo $sale['sale_id']; ?></span>
                                     </div>
                                     <div class="col-md-3">
-                                        <strong>Date & Time:</strong><br>
+                                        <strong>Date &amp; Time:</strong><br>
                                         <span class="text-muted">
-                                                <?php echo date('d/m/Y h:i:s a', strtotime($sale['created_at'])); ?>
-                                            </span>
+                                            <?php echo date('d/m/Y h:i:s a', strtotime($sale['created_at'])); ?>
+                                        </span>
                                     </div>
                                     <div class="col-md-3">
                                         <strong>Payment Method:</strong><br>
                                         <span class="text-muted">
-                                                <?php echo isset($sale['payment_method']) ? ucfirst($sale['payment_method']) : '-'; ?>
-                                            </span>
+                                            <?php echo isset($sale['payment_method']) ? ucfirst($sale['payment_method']) : '-'; ?>
+                                        </span>
                                     </div>
                                     <div class="col-md-3">
                                         <strong>Created By:</strong><br>
                                         <span class="text-muted">
-                                                <?php echo isset($sale['created_by']) ? ucfirst($sale['created_by']) : '-'; ?>
-                                            </span>
+                                            <?php echo isset($sale['created_by']) ? ucfirst($sale['created_by']) : '-'; ?>
+                                        </span>
                                     </div>
                                 </div>
 
@@ -70,20 +70,20 @@ $items = json_decode($sale['items'], true);
                                     <div class="col-md-4">
                                         <strong>Amount Received:</strong><br>
                                         <span class="text-muted">
-                                                <?php echo isset($sale['amount_received']) ? number_format($sale['amount_received'], 2) : '0.00'; ?>
-                                            </span>
+                                            <?php echo isset($sale['amount_received']) ? number_format($sale['amount_received'], 2) : '0.00'; ?>
+                                        </span>
                                     </div>
                                     <div class="col-md-4">
                                         <strong>Change Given:</strong><br>
                                         <span class="text-muted">
-                                                <?php echo isset($sale['change_given']) ? number_format($sale['change_given'], 2) : '0.00'; ?>
-                                            </span>
+                                            <?php echo isset($sale['change_given']) ? number_format($sale['change_given'], 2) : '0.00'; ?>
+                                        </span>
                                     </div>
                                     <div class="col-md-4">
                                         <strong>Final Bill:</strong><br>
                                         <span class="text-success font-weight-bold">
-                                                <?php echo number_format($sale['final_bill'], 2); ?>
-                                            </span>
+                                            <?php echo number_format($sale['final_bill'], 2); ?>
+                                        </span>
                                     </div>
                                 </div>
 
@@ -100,6 +100,9 @@ $items = json_decode($sale['items'], true);
                                             <th>Product Name</th>
                                             <th>Price</th>
                                             <th>Qty</th>
+                                            <th>Discount %</th>
+                                            <th>Discount Amt</th>
+                                            <th>Tax (12%)</th>
                                             <th>Line Total</th>
                                         </tr>
                                         </thead>
@@ -108,21 +111,36 @@ $items = json_decode($sale['items'], true);
                                         $i = 1;
                                         $subtotal = 0;
                                         foreach ($items as $item):
-                                            $subtotal += $item['total'];
+                                            $discountPercent = isset($item['discount_percent']) ? floatval($item['discount_percent']) : 0;
+                                            $discountAmount  = isset($item['discount_amount'])  ? floatval($item['discount_amount'])  : 0;
+                                            $tax             = isset($item['tax'])              ? floatval($item['tax'])              : 0;
+                                            $total           = isset($item['total'])            ? floatval($item['total'])            : 0;
+                                            // Recalculate for old bills missing tax/discount fields
+                                            if ($tax == 0 && $total == 0) {
+                                                $lineSubtotal   = floatval($item['price']) * intval($item['qty']);
+                                                $discountAmount = $lineSubtotal * ($discountPercent / 100);
+                                                $taxable        = $lineSubtotal - $discountAmount;
+                                                $tax            = $taxable * 0.12;
+                                                $total          = $taxable + $tax;
+                                            }
+                                            $subtotal += $total;
                                             ?>
                                             <tr>
                                                 <td><?php echo $i++; ?></td>
-                                                <td><?php echo $item['product_id']; ?></td>
-                                                <td class="text-left"><?php echo $item['product_name']; ?></td>
-                                                <td><?php echo number_format($item['price'], 2); ?></td>
-                                                <td><?php echo $item['qty']; ?></td>
-                                                <td><?php echo number_format($item['total'], 2); ?></td>
+                                                <td><?php echo htmlspecialchars($item['product_id']); ?></td>
+                                                <td class="text-left"><?php echo htmlspecialchars($item['product_name']); ?></td>
+                                                <td><?php echo number_format(floatval($item['price']), 2); ?></td>
+                                                <td><?php echo intval($item['qty']); ?></td>
+                                                <td><?php echo $discountPercent > 0 ? $discountPercent . '%' : '-'; ?></td>
+                                                <td><?php echo $discountAmount > 0 ? number_format($discountAmount, 2) : '-'; ?></td>
+                                                <td><?php echo number_format($tax, 2); ?></td>
+                                                <td><?php echo number_format($total, 2); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         </tbody>
                                         <tfoot class="table-light">
                                         <tr>
-                                            <td colspan="5" class="text-right font-weight-bold">Subtotal</td>
+                                            <td colspan="8" class="text-right font-weight-bold">Subtotal</td>
                                             <td class="font-weight-bold"><?php echo number_format($subtotal, 2); ?></td>
                                         </tr>
                                         </tfoot>
@@ -139,15 +157,15 @@ $items = json_decode($sale['items'], true);
                                 <div class="row mt-4">
                                     <div class="col-12 d-flex justify-content-end gap-2">
                                         <button onclick='printBill(<?php echo json_encode([
-                                                "sale_id" => $sale['sale_id'],
-                                                "items" => $items,
-                                                "subtotal" => $subtotal,
-                                                "final_bill" => $sale['final_bill'],
+                                                "sale_id"        => $sale['sale_id'],
+                                                "items"          => $items,
+                                                "subtotal"       => $subtotal,
+                                                "final_bill"     => $sale['final_bill'],
                                                 "payment_method" => $sale['payment_method'] ?? '',
-                                                "amount_received" => $sale['amount_received'] ?? 0,
-                                                "change_given" => $sale['change_given'] ?? 0,
-                                                "created_at" => $sale['created_at'],
-                                                "created_by" => $sale['created_by'] ?? ''
+                                                "amount_received"=> $sale['amount_received'] ?? 0,
+                                                "change_given"   => $sale['change_given'] ?? 0,
+                                                "created_at"     => $sale['created_at'],
+                                                "created_by"     => $sale['created_by'] ?? ''
                                         ]); ?>)' class="btn btn-success">
                                             <i class="fas fa-print"></i> Print
                                         </button>
@@ -165,7 +183,3 @@ $items = json_decode($sale['items'], true);
             </div>
         </div>
         <?php require_once 'includes/footer.php'; ?>
-    </div>
-</div>
-</body>
-</html>

@@ -16,10 +16,10 @@ $items = json_decode($sale['items'], true);
 if (!is_array($items)) {
     $items = [];
 }
-$finalBill = $sale['final_bill'];
-$paymentMethod = $sale['payment_method'];
+$finalBill      = $sale['final_bill'];
+$paymentMethod  = $sale['payment_method'];
 $amountReceived = $sale['amount_received'];
-$changeGiven = $sale['change_given'];
+$changeGiven    = $sale['change_given'];
 ?>
 
 <!-- Page Wrapper -->
@@ -47,16 +47,17 @@ $changeGiven = $sale['change_given'];
                     <!-- Scan Input -->
                     <div class="row mb-3">
                         <div class="col-md-8 col-12">
-                            <input type="number" id="barcode" class="form-control"
+                            <input type="number" id="edit-barcode" class="form-control"
                                    placeholder="Scan or enter at least last 5 digits">
                         </div>
                         <div class="col-md-4 col-12 mt-2 mt-md-0">
                             <button class="btn btn-primary w-100" onclick="validateProductForBillEdit()">Add</button>
                         </div>
                     </div>
+
                     <!-- Table -->
                     <div class="table-responsive">
-                        <table class="table table-bordered" id="bill-table">
+                        <table class="table table-bordered text-center" id="bill-table">
                             <thead>
                             <tr>
                                 <th>#</th>
@@ -64,41 +65,89 @@ $changeGiven = $sale['change_given'];
                                 <th>Product</th>
                                 <th>Price</th>
                                 <th>Qty</th>
+                                <th>Discount %</th>
+                                <th>Discount Amt</th>
+                                <th>Tax (12%)</th>
                                 <th>Line Total</th>
                                 <th>Actions</th>
                             </tr>
                             </thead>
                             <tbody>
-                            <?php foreach ($items as $index => $item): ?>
-                                <tr>
+                            <?php foreach ($items as $index => $item):
+                                $discountPercent = isset($item['discount_percent']) ? floatval($item['discount_percent']) : 0;
+                                $discountAmount  = isset($item['discount_amount'])  ? floatval($item['discount_amount'])  : 0;
+                                $tax             = isset($item['tax'])              ? floatval($item['tax'])              : 0;
+                                $total           = isset($item['total'])            ? floatval($item['total'])            : 0;
+                                // Recalculate for old bills missing tax/total
+                                if ($tax == 0 && $total == 0) {
+                                    $subtotal       = floatval($item['price']) * intval($item['qty']);
+                                    $discountAmount = $subtotal * ($discountPercent / 100);
+                                    $taxable        = $subtotal - $discountAmount;
+                                    $tax            = $taxable * 0.12;
+                                    $total          = $taxable + $tax;
+                                }
+                                ?>
+                                <tr data-barcode="<?php echo htmlspecialchars($item['product_id']); ?>"
+                                    data-stock="9999"
+                                    data-discount="<?php echo $discountPercent; ?>">
                                     <td class="row-num"><?php echo $index + 1; ?></td>
                                     <td hidden class="product-id"><?php echo htmlspecialchars($item['product_id']); ?></td>
                                     <td class="product-name"><?php echo htmlspecialchars($item['product_name']); ?></td>
-                                    <td class="price"><?php echo htmlspecialchars($item['price']); ?></td>
-                                    <td class="qty"><?php echo htmlspecialchars($item['qty']); ?></td>
-                                    <td class="line-total"><?php echo htmlspecialchars($item['total']); ?></td>
+                                    <td class="price"><?php echo number_format(floatval($item['price']), 2, '.', ''); ?></td>
+                                    <td class="qty"><?php echo intval($item['qty']); ?></td>
                                     <td>
-                                        <button class="btn btn-danger btn-sm" onclick="removeRowEdit(this)">Remove</button>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control discount-percent"
+                                                   min="1" max="25" placeholder="0"
+                                                   value="<?php echo $discountPercent > 0 ? $discountPercent : ''; ?>">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary apply-discount-edit"
+                                                        type="button">Apply</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="discount-amt"><?php echo number_format($discountAmount, 2, '.', ''); ?></td>
+                                    <td class="tax"><?php echo number_format($tax, 2, '.', ''); ?></td>
+                                    <td class="line-total"><?php echo number_format($total, 2, '.', ''); ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary increase-edit">+</button>
+                                        <button class="btn btn-sm btn-secondary decrease-edit">-</button>
+                                        <button class="btn btn-sm btn-danger remove-edit">Remove</button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
+
                     <!-- Total -->
-                    <div class="alert alert-dark mt-3">Final Bill: <span id="final-bill"><?php echo htmlspecialchars($finalBill); ?></span></div>
+                    <div class="alert alert-dark mt-3">
+                        Final Bill: <span id="final-bill"><?php echo htmlspecialchars($finalBill); ?></span>
+                    </div>
 
                     <!-- Payment Method Selection -->
                     <div class="row mb-3">
                         <div class="col-md-6 col-12">
-                            <label class="d-block mb-2">Payment Method</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="payment-method" id="pm-cash" value="cash" <?php echo $paymentMethod === 'cash' ? 'checked' : ''; ?>>
-                                <label class="form-check-label" for="pm-cash">Cash</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="payment-method" id="pm-card" value="card" <?php echo $paymentMethod === 'card' ? 'checked' : ''; ?>>
-                                <label class="form-check-label" for="pm-card">Card</label>
+                            <label class="d-block mb-2 font-weight-bold">Payment Method</label>
+                            <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                                <label class="btn btn-outline-primary">
+                                    <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="payment-method"
+                                            id="pm-cash"
+                                            value="cash"
+                                    > Cash
+                                </label>
+                                <label class="btn btn-outline-success">
+                                    <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="payment-method"
+                                            id="pm-card"
+                                            value="card"
+                                    > Card
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -107,7 +156,8 @@ $changeGiven = $sale['change_given'];
                     <div id="cash-section" class="row mb-3" style="display:none;">
                         <div class="col-md-4 col-12">
                             <label>Amount Received</label>
-                            <input type="number" id="amount-received" class="form-control" min="0" step="0.01" placeholder="0.00"
+                            <input type="number" id="amount-received" class="form-control"
+                                   min="0" step="0.01" placeholder="0.00"
                                    value="<?php echo htmlspecialchars($amountReceived); ?>">
                         </div>
                         <div class="col-md-4 col-12">

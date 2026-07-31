@@ -57,6 +57,8 @@ require_once("includes/auth_admin.php");
                                             <th>Product</th>
                                             <th>Price</th>
                                             <th>Qty</th>
+                                            <th>Discount %</th>
+                                            <th>Discount Amt</th>
                                             <th>Tax (12%)</th>
                                             <th>Line Total</th>
                                             <th>Actions</th>
@@ -79,11 +81,11 @@ require_once("includes/auth_admin.php");
                                     <div class="col-md-12">
                                         <h6 class="font-weight-bold mb-3">Payment Method:</h6>
                                         <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                                            <label class="btn btn-outline-primary active">
-                                                <input type="radio" name="payment_method" id="cash" value="cash" checked> Cash
-                                            </label>
                                             <label class="btn btn-outline-primary">
-                                                <input type="radio" name="payment_method" id="card" value="card"> Card
+                                                <input type="radio" name="payment-method" id="cash" value="cash"> Cash
+                                            </label>
+                                            <label class="btn btn-outline-success">
+                                                <input type="radio" name="payment-method" id="card" value="card"> Card
                                             </label>
                                         </div>
                                     </div>
@@ -106,10 +108,10 @@ require_once("includes/auth_admin.php");
                                 <!-- Action Buttons -->
                                 <div class="row mt-4" id="action-buttons" style="display:none;">
                                     <div class="col-md-12 text-right">
-                                        <button class="btn btn-success btn-lg" id="save-bill" onclick="saveBill()">
+                                        <button class="btn btn-success btn-lg" id="save-bill">
                                             <i class="fas fa-save"></i> Save Bill
                                         </button>
-                                        <button class="btn btn-info btn-lg" id="print-bill" onclick="printBill()">
+                                        <button class="btn btn-info btn-lg" id="print-bill">
                                             <i class="fas fa-print"></i> Print Bill
                                         </button>
                                     </div>
@@ -123,9 +125,3 @@ require_once("includes/auth_admin.php");
             </div>
         </div>
         <?php require_once("includes/footer.php"); ?>
-    </div>
-</div>
-
-<script src="js/form-requests.js"></script>
-</body>
-</html>
