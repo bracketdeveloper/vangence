@@ -500,17 +500,20 @@ function updateOrderStatus($conn, $orderId, $status)
 // lives here ONLY, so it never gets duplicated.
 function sendEmail($to, $toName, $subject, $htmlBody)
 {
+    // Load credentials from .env — keeps secrets out of version control.
+    $env = parse_ini_file(__DIR__ . '/.env');
+
     $mail = new PHPMailer\PHPMailer\PHPMailer(true);
     try {
         $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
+        $mail->Host       = $env['MAIL_HOST'];
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'orders@vangence.com';
-        $mail->Password   = 'YOUR_16_CHAR_APP_PASSWORD';
+        $mail->Username   = $env['MAIL_USERNAME'];
+        $mail->Password   = $env['MAIL_PASSWORD'];
+        $mail->Port       = $env['MAIL_PORT'];
         $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
 
-        $mail->setFrom('orders@vangence.com', 'Vangence');
+        $mail->setFrom($env['MAIL_USERNAME'], $env['MAIL_FROM_NAME']);
         $mail->addAddress($to, $toName);
 
         $mail->isHTML(true);
