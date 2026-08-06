@@ -1,11 +1,10 @@
 <?php
-// Guarded: if composer's vendor/ folder isn't present on the server (e.g. it
-// wasn't uploaded, or `composer install` was never run there), this used to
-// be a hard `require` and would fatal-crash EVERY page that loads
-// functions.php — including checkout — not just the email feature.
-// Now it degrades gracefully: PHPMailer just won't be available, and
-// sendEmail() below checks for that instead of fataling.
-$vendorAutoload = __DIR__ . '/vendor/autoload.php';
+// Load Composer's autoloader from the single admin/vendor/ folder (one
+// level up from model/). That folder contains PHPMailer; the old
+// model/vendor/ copy was deleted to avoid confusion. Without this autoloader
+// PHPMailer is never loaded and emails silently never send — even though
+// orders still succeed.
+$vendorAutoload = dirname(__DIR__) . '/vendor/autoload.php';
 if (file_exists($vendorAutoload)) {
     require $vendorAutoload;
 }
@@ -507,39 +506,80 @@ function updateOrderStatus($conn, $orderId, $status)
 
 // Low-level sender. Both template functions below call this — SMTP setup
 // lives here ONLY, so it never gets duplicated.
+//
+// IMPORTANT: this requires PHPMailer. If the vendor/ folder is not present on
+// the server (composer install was never run there), PHPMailer won't be loaded
+// and NO email will be sent — the order itself still succeeds, which is why
+// you see "order placed but no email". Run this once on the server:
+//     composer require phpmailer/phpmailer
+// As a safety net, if PHPMailer is genuinely unavailable we fall back to
+// PHP's built-in mail() so at least something goes out instead of silence.
 function sendEmail($to, $toName, $subject, $htmlBody)
 {
-    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        error_log('sendEmail: PHPMailer is not available (vendor/autoload.php missing or composer install not run).');
-        return false;
-    }
-
     // Load credentials from .env — keeps secrets out of version control.
-    $env = parse_ini_file(__DIR__ . '/.env');
+    // INI_SCANNER_RAW stops parse_ini_file from mangling values that contain
+    // special characters (e.g. the @ in the mailbox password).
+    $envPath = __DIR__ . '/.env';
+    $env = file_exists($envPath) ? parse_ini_file($envPath, false, INI_SCANNER_RAW) : [];
 
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-    try {
-        $mail->isSMTP();
-        $mail->Host       = $env['MAIL_HOST'];
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $env['MAIL_USERNAME'];
-        $mail->Password   = $env['MAIL_PASSWORD'];
-        $mail->Port       = $env['MAIL_PORT'];
-        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $mailHost     = isset($env['MAIL_HOST'])     ? trim($env['MAIL_HOST'])     : '';
+    $mailUsername = isset($env['MAIL_USERNAME']) ? trim($env['MAIL_USERNAME']) : '';
+    $mailPassword = isset($env['MAIL_PASSWORD']) ? trim($env['MAIL_PASSWORD']) : '';
+    $mailPort     = isset($env['MAIL_PORT'])     ? intval($env['MAIL_PORT'])   : 587;
+    $mailFromName = isset($env['MAIL_FROM_NAME']) ? trim($env['MAIL_FROM_NAME']) : '';
 
-        $mail->setFrom($env['MAIL_USERNAME'], $env['MAIL_FROM_NAME']);
-        $mail->addAddress($to, $toName);
+    // ---- Preferred path: PHPMailer over SMTP ----
+    if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host       = $mailHost;
+            $mail->SMTPAuth   = true;
+            $mail->Username   = $mailUsername;
+            $mail->Password   = $mailPassword;
+            $mail->Port       = $mailPort;
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            // Let PHPMailer upgrade plain connections to TLS automatically if the
+            // server advertises it — prevents silent handshake failures on port 587.
+            $mail->SMTPAutoTLS = true;
+            $mail->CharSet    = 'UTF-8';
+            $mail->Encoding   = 'base64';
 
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $mail->Body    = $htmlBody;
+            $mail->setFrom($mailUsername, $mailFromName);
+            $mail->addAddress($to, $toName);
 
-        $mail->send();
-        return true;
-    } catch (\Exception $e) {
-        error_log("Email could not be sent. Mailer Error: {$mail->ErrorInfo}");
-        return false;
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body    = $htmlBody;
+            // Plain-text fallback for email clients that don't render HTML.
+            $mail->AltBody = strip_tags($htmlBody);
+
+            $mail->send();
+            return true;
+        } catch (\Throwable $e) {
+            // Log the full reason so you can actually see why it failed instead
+            // of guessing. Check your PHP error log.
+            error_log('sendEmail SMTP failed: ' . $e->getMessage() . ' | Mailer Error: ' . (isset($mail) ? $mail->ErrorInfo : ''));
+            // Fall through to the mail() fallback below — don't give up silently.
+        }
+    } else {
+        error_log('sendEmail: PHPMailer is not available (vendor/autoload.php missing or composer install not run). Falling back to mail().');
     }
+
+    // ---- Fallback path: PHP built-in mail() ----
+    // Used only if PHPMailer isn't installed OR SMTP threw. Requires a working
+    // MTA (sendmail/postfix) on the server. Returns true/false; we log the
+    // outcome either way so you can trace what happened.
+    $headers = [
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . ($mailFromName !== '' ? $mailFromName . ' <' . $mailUsername . '>' : $mailUsername),
+    ];
+    $ok = @mail($to, $subject, $htmlBody, implode("\r\n", $headers));
+    if (!$ok) {
+        error_log('sendEmail mail() fallback also failed for: ' . $to);
+    }
+    return $ok;
 }
 
 // Shared email header/footer wrapper so both templates look consistent.

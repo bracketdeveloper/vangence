@@ -823,7 +823,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'update_order_status') {
 
     if ($statusUpdated) {
         // Email failure should never block the success response to the admin.
-        sendOrderStatusUpdateEmail($conn, $orderId);
+        try {
+            sendOrderStatusUpdateEmail($conn, $orderId);
+        } catch (\Throwable $emailError) {
+            error_log('Order status update email failed for order ' . $orderId . ': ' . $emailError->getMessage());
+        }
         echo "Order status updated successfully.";
     } else {
         echo "An error occurred while updating the order status.";
