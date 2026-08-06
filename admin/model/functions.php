@@ -1,5 +1,14 @@
 <?php
-require __DIR__ . '/vendor/autoload.php';
+// Guarded: if composer's vendor/ folder isn't present on the server (e.g. it
+// wasn't uploaded, or `composer install` was never run there), this used to
+// be a hard `require` and would fatal-crash EVERY page that loads
+// functions.php — including checkout — not just the email feature.
+// Now it degrades gracefully: PHPMailer just won't be available, and
+// sendEmail() below checks for that instead of fataling.
+$vendorAutoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($vendorAutoload)) {
+    require $vendorAutoload;
+}
 
 require_once "db_connections.php";
 
@@ -500,6 +509,11 @@ function updateOrderStatus($conn, $orderId, $status)
 // lives here ONLY, so it never gets duplicated.
 function sendEmail($to, $toName, $subject, $htmlBody)
 {
+    if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+        error_log('sendEmail: PHPMailer is not available (vendor/autoload.php missing or composer install not run).');
+        return false;
+    }
+
     // Load credentials from .env — keeps secrets out of version control.
     $env = parse_ini_file(__DIR__ . '/.env');
 
