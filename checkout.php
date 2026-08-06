@@ -73,7 +73,7 @@ include 'includes/header.php';
                             <div class="col-12 mb-3">
                                 <div class="form-check form-check-inline me-4">
                                     <input class="form-check-input" type="radio" name="payment-method" id="pay-card"
-                                           value="card" checked>
+                                           value="card">
                                     <label class="form-check-label text-uppercase" for="pay-card"
                                            style="font-size: 0.8rem; font-weight: 500; cursor: pointer;">
                                         Credit Card <i class="fa-solid fa-credit-card ms-1"></i>
@@ -81,13 +81,25 @@ include 'includes/header.php';
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="payment-method" id="pay-cod"
-                                           value="cod">
+                                           value="cod" checked>
                                     <label class="form-check-label text-uppercase" for="pay-cod"
                                            style="font-size: 0.8rem; font-weight: 500; cursor: pointer;">
                                         Cash on Delivery <i class="fa-solid fa-truck-ramp-box ms-1"></i>
                                     </label>
                                 </div>
                             </div>
+
+                            <div id="card-unavailable-note" class="col-12 mb-3">
+                                <div class="p-3 border border-navy-light bg-light text-center text-navy" style="font-size: 0.8rem;">
+                                    <i class="fa-solid fa-circle-info me-2"></i>
+                                    Credit Card payment is not available at the moment. Please select Cash on Delivery to continue.
+                                </div>
+                            </div>
+
+                            <!--
+                                Credit Card payment is not implemented yet. These fields are kept
+                                (commented out) for when card payments are added later. The JS
+                                below currently forces Cash on Delivery and keeps this section hidden.
 
                             <div id="card-payment-fields" class="row g-3">
                                 <div class="col-12">
@@ -116,6 +128,12 @@ include 'includes/header.php';
                                     <div class="invalid-feedback">Enter 3 or 4 digits.</div>
                                 </div>
                             </div>
+                            -->
+
+                            <!-- Placeholder kept in the DOM so the existing JS references to
+                                 #card-payment-fields don't break; it stays empty and hidden
+                                 until card payments are implemented. -->
+                            <div id="card-payment-fields" class="row g-3" style="display:none;"></div>
 
                             <div class="col-12 mt-5 pt-3 border-top border-light">
                                 <button type="submit" class="btn btn-navy w-100 py-3 text-uppercase fw-bold"
@@ -162,6 +180,10 @@ include 'includes/header.php';
         </div>
     </div>
 
+    <!-- Required for validateCheckoutForm() / sendAjaxOrderRequest() used below -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="admin/js/form-requests.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             let cart = JSON.parse(localStorage.getItem('vangence_cart')) || [];
@@ -181,10 +203,15 @@ include 'includes/header.php';
 
             // Payment Field Toggle
             const payCardRadio = document.getElementById('pay-card');
+            const payCodRadio = document.getElementById('pay-cod');
             const cardFields = document.getElementById('card-payment-fields');
             const cardInputs = cardFields.querySelectorAll('input');
 
             function togglePaymentFields() {
+                // --- Credit Card payment is not implemented yet ---
+                // Once card payments are ready, remove the two lines below
+                // and uncomment this block:
+                /*
                 if (payCardRadio.checked) {
                     cardFields.style.display = 'flex';
                     cardInputs.forEach(input => input.setAttribute('required', 'true'));
@@ -192,10 +219,19 @@ include 'includes/header.php';
                     cardFields.style.display = 'none';
                     cardInputs.forEach(input => input.removeAttribute('required'));
                 }
+                */
+                cardFields.style.display = 'none';
+                cardInputs.forEach(input => input.removeAttribute('required'));
             }
 
             document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
-                radio.addEventListener('change', togglePaymentFields);
+                radio.addEventListener('change', function () {
+                    if (payCardRadio.checked) {
+                        alert('Credit Card payment is not available at the moment. Please select Cash on Delivery.');
+                        payCodRadio.checked = true;
+                    }
+                    togglePaymentFields();
+                });
             });
             togglePaymentFields();
 
@@ -233,16 +269,18 @@ include 'includes/header.php';
 
             // Form Submit & Validation
             checkoutForm.addEventListener('submit', function (e) {
-                if (!checkoutForm.checkValidity()) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                } else {
-                    e.preventDefault();
-                    alert('Order Placed Successfully!');
-                    localStorage.setItem('vangence_cart', JSON.stringify([]));
-                    window.location.href = 'shop.php';
-                }
+                e.preventDefault();
                 checkoutForm.classList.add('was-validated');
+
+                if (!checkoutForm.checkValidity()) {
+                    return;
+                }
+
+                validateCheckoutForm(cart, {
+                    subtotal: subtotal.toFixed(2),
+                    shipping: shipping.toFixed(2),
+                    total: finalTotal.toFixed(2)
+                });
             });
         });
     </script>

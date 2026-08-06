@@ -50,6 +50,11 @@ if (isset($_SESSION)) {
             <i class="fas fa-fw fa-money-bill-wave"></i>
             <span>Sales</span></a>
     </li>
+    <li class="nav-item active">
+        <a class="nav-link" href="orders.php">
+            <i class="fas fa-fw fa-shipping-fast"></i>
+            <span>Orders</span></a>
+    </li>
     <?php if ($userRole === "admin"): ?>
         <li class="nav-item active">
             <a class="nav-link" href="users.php">

@@ -11,6 +11,26 @@ $(document).on('click', '.remove-image-btn', function () {
     $(this).parent().remove();
 });
 
+// Order Details page: update order status
+$(document).on('click', '#btn-update-status', function () {
+    const btn = $(this);
+    const orderId = btn.data('order-id');
+    const newStatus = $('#order-status-select').val();
+
+    $.ajax({
+        url: 'model/ajax.php?action=update_order_status',
+        type: 'POST',
+        data: {
+            order_id: orderId,
+            order_status: newStatus
+        }
+    }).done(function (data) {
+        alert(data);
+    }).fail(function () {
+        alert('Something went wrong while updating the order status. Please try again.');
+    });
+});
+
 function sendAjaxRequest(url, formData, redirectUrl) {
     $.ajax({
         url: url,
@@ -209,6 +229,123 @@ $(document).on("click", ".remove", function () {
 function updateRowNumbers() {
     $("#cartTable tbody tr").each(function (index) {
         $(this).find("td:first").text(index + 1);
+    });
+}
+
+// ===================== CHECKOUT / PLACE ORDER =====================
+
+// Validates the checkout form fields and, if valid, submits the order via AJAX.
+// `cart` is the array of cart items from localStorage; `totals` is
+// { subtotal, shipping, total } as strings/numbers already formatted for storage.
+function validateCheckoutForm(cart, totals) {
+    const firstName = document.getElementById('bill-fname');
+    const lastName  = document.getElementById('bill-lname');
+    const email     = document.getElementById('bill-email');
+    const address   = document.getElementById('bill-address');
+    const city      = document.getElementById('bill-city');
+    const state     = document.getElementById('bill-state');
+    const phone     = document.getElementById('bill-phone');
+    const paymentMethodEl = document.querySelector('input[name="payment-method"]:checked');
+
+    if (!checkEmptyInput(firstName, "Please enter your first name.")) return false;
+    if (!checkEmptyInput(lastName,  "Please enter your last name.")) return false;
+    if (!checkEmptyInput(email,     "Please enter your email address.")) return false;
+    if (!checkValidEmail(email)) return false;
+    if (!checkEmptyInput(address,   "Please enter your street address.")) return false;
+    if (!checkEmptyInput(city,      "Please enter your city.")) return false;
+    if (!checkEmptyInput(state,     "Please enter your state.")) return false;
+    if (!checkEmptyInput(phone,     "Please enter your phone number.")) return false;
+
+    if (!/^[0-9]{10,}$/.test(phone.value.trim())) {
+        alert("Please enter a valid phone number (minimum 10 digits).");
+        phone.focus();
+        return false;
+    }
+
+    if (!paymentMethodEl) {
+        alert("Please select a payment method.");
+        return false;
+    }
+
+    let cardNum = "";
+
+    if (paymentMethodEl.value === "card") {
+        const cardNumEl    = document.getElementById('card-num');
+        const cardExpiryEl = document.getElementById('card-expiry');
+        const cardCvcEl    = document.getElementById('card-cvc');
+
+        if (!checkEmptyInput(cardNumEl, "Please enter your card number.")) return false;
+        if (!/^\d{16}$/.test(cardNumEl.value.trim().replace(/\s/g, ''))) {
+            alert("Enter a valid 16-digit card number.");
+            cardNumEl.focus();
+            return false;
+        }
+        if (!checkEmptyInput(cardExpiryEl, "Please enter the card expiry date.")) return false;
+        if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiryEl.value.trim())) {
+            alert("Expiry date must be in MM/YY format.");
+            cardExpiryEl.focus();
+            return false;
+        }
+        if (!checkEmptyInput(cardCvcEl, "Please enter the card CVC/CVV.")) return false;
+        if (!/^\d{3,4}$/.test(cardCvcEl.value.trim())) {
+            alert("Enter a valid 3 or 4 digit CVC.");
+            cardCvcEl.focus();
+            return false;
+        }
+
+        // Only the last 4 digits are ever sent/stored — see sendAjaxOrderRequest / ajax.php.
+        cardNum = cardNumEl.value.trim().replace(/\s/g, '');
+    }
+
+    if (!cart || cart.length === 0) {
+        alert("Your cart is empty.");
+        return false;
+    }
+
+    var formData = new FormData();
+    formData.append('first_name', firstName.value.trim());
+    formData.append('last_name',  lastName.value.trim());
+    formData.append('email',      email.value.trim());
+    formData.append('phone',      phone.value.trim());
+    formData.append('address',    address.value.trim());
+    formData.append('city',       city.value.trim());
+    formData.append('state',      state.value.trim());
+    formData.append('payment_method', paymentMethodEl.value);
+    formData.append('card_num',   cardNum);
+    formData.append('subtotal',   totals.subtotal);
+    formData.append('shipping',   totals.shipping);
+    formData.append('total',      totals.total);
+    formData.append('cart_items', JSON.stringify(cart));
+
+    sendAjaxOrderRequest("admin/model/ajax.php?action=place_order", formData);
+    return true;
+}
+
+// Submits the order and handles the JSON response from ajax.php.
+function sendAjaxOrderRequest(url, formData) {
+    $.ajax({
+        url: url,
+        type: 'POST',
+        contentType: false,
+        processData: false,
+        data: formData
+    }).done(function (data) {
+        var response;
+        try {
+            response = typeof data === 'string' ? JSON.parse(data) : data;
+        } catch (e) {
+            alert("Unexpected response from server.");
+            return;
+        }
+
+        alert(response.message);
+
+        if (response.status === 'success') {
+            localStorage.setItem('vangence_cart', JSON.stringify([]));
+            window.location.href = 'order-confirmation.php?order=' + encodeURIComponent(response.order_number);
+        }
+    }).fail(function () {
+        alert("Something went wrong while placing your order. Please try again.");
     });
 }
 
@@ -594,8 +731,6 @@ function saveBill(printAfter) {
 }
 
 function printBill(data) {
-    console.log(data)
-
     // Edit these to match your actual store details
     const SHOP_NAME = "Vangence";
     const SHOP_ADDRESS = "123 Main Street, Lahore, Punjab";
@@ -609,30 +744,44 @@ function printBill(data) {
         "For reasons of hygiene, intimates, jewelry, fragrances, and accessories are not eligible for a refund or exchange."
     ];
 
-    let win = window.open('', '_blank', 'width=900,height=1100');
+    let win = window.open('', '_blank', 'width=602,height=800');
     win.document.write('<html><head><title>Bill #' + data.sale_id + '</title>');
     win.document.write('<style>');
-    win.document.write('body{font-family:monospace;font-size:12px;margin:20px;color:#111;}');
-    win.document.write('.shop-name{text-align:center;font-size:18px;font-weight:bold;letter-spacing:1px;margin:0;}');
-    win.document.write('.shop-info{text-align:center;font-size:11px;margin:2px 0;color:#333;}');
-    win.document.write('h3{text-align:center;margin:10px 0 4px;}');
+
+    // Thermal printer page setup — 80mm roll (printable ~72mm / ~204pt)
+    win.document.write('@page{size:80mm auto;margin:0;}');
+    win.document.write('*{box-sizing:border-box;}');
+    win.document.write('body{font-family:monospace;font-size:11px;margin:0;padding:4mm 4mm 0 4mm;color:#000;width:72mm;}');
+
+    win.document.write('.shop-name{text-align:center;font-size:14px;font-weight:bold;letter-spacing:1px;margin:0 0 2px;}');
+    win.document.write('.shop-info{text-align:center;font-size:10px;margin:1px 0;color:#222;}');
+    win.document.write('h3{text-align:center;margin:6px 0 2px;font-size:12px;}');
     win.document.write('.center{text-align:center;}');
     win.document.write('.right{text-align:right;}');
-    win.document.write('table{width:100%;border-collapse:collapse;margin-top:8px;}');
-    win.document.write('th{border-bottom:2px solid #000;padding:4px 6px;text-align:left;}');
+
+    win.document.write('table{width:100%;border-collapse:collapse;margin-top:4px;}');
+    win.document.write('th{border-bottom:1px solid #000;padding:2px 3px;text-align:left;font-size:10px;}');
     win.document.write('th.right{text-align:right;}');
-    win.document.write('td{padding:3px 6px;border-bottom:1px dotted #999;}');
+    win.document.write('td{padding:2px 3px;border-bottom:1px dotted #888;font-size:10px;}');
     win.document.write('td.right{text-align:right;}');
-    win.document.write('.summary{margin-top:12px;width:100%;}');
-    win.document.write('.summary td{border:none;padding:2px 6px;}');
+
+    win.document.write('.summary{margin-top:6px;width:100%;}');
+    win.document.write('.summary td{border:none;padding:1px 3px;font-size:10px;}');
     win.document.write('.summary .label{font-weight:bold;}');
-    win.document.write('hr{border:none;border-top:1px solid #000;margin:8px 0;}');
+
+    win.document.write('hr{border:none;border-top:1px solid #000;margin:5px 0;}');
     win.document.write('.dhr{border-top:2px solid #000;}');
-    win.document.write('.terms{margin-top:14px;font-size:10.5px;line-height:1.5;}');
-    win.document.write('.terms h4{margin:0 0 4px;text-align:center;text-transform:uppercase;letter-spacing:0.5px;font-size:11px;}');
-    win.document.write('.terms ul{margin:0;padding-left:16px;}');
-    win.document.write('.terms li{margin-bottom:3px;}');
-    win.document.write('.footer{text-align:center;margin-top:14px;font-size:11px;}');
+
+    win.document.write('.terms{margin-top:8px;font-size:9px;line-height:1.4;}');
+    win.document.write('.terms h4{margin:0 0 3px;text-align:center;text-transform:uppercase;letter-spacing:0.5px;font-size:9px;}');
+    win.document.write('.terms ul{margin:0;padding-left:12px;}');
+    win.document.write('.terms li{margin-bottom:2px;}');
+
+    win.document.write('.footer{text-align:center;margin-top:8px;font-size:10px;padding-bottom:6mm;}');
+
+    // Hide everything except the receipt when printing
+    win.document.write('@media print{body{margin:0;padding:2mm 4mm 0 4mm;}}');
+
     win.document.write('</style>');
     win.document.write('</head><body>');
 
@@ -656,6 +805,7 @@ function printBill(data) {
     win.document.write('<th class="right">Tax(12%)</th>');
     win.document.write('<th class="right">Total</th>');
     win.document.write('</tr></thead><tbody>');
+
     let items = data.items || [];
     let html = '';
     items.forEach(function (r, i) {
@@ -699,8 +849,48 @@ function printBill(data) {
     win.document.write('</body></html>');
     win.document.close();
     win.focus();
-    win.print();
+
+    // Wait for content to load, then print and cut
+    win.onload = function () {
+        win.print();
+    };
+
+    // Auto paper cut + close after printing
+    win.onafterprint = function () {
+        // Send ESC/POS paper cut command via a hidden iframe (works when
+        // the receipt printer is set as the default printer and the browser
+        // has raw printing access, e.g. QZ Tray or similar middleware).
+        // If you use QZ Tray, replace this block with your qz.print() cut call.
+        cutPaper(win);
+        win.close();
+    };
 }
+
+/**
+ * Sends a paper cut signal.
+ *
+ * Browser-only approach: appends a cut marker div that some printer drivers
+ * recognise as a form-feed / full-cut instruction when printing to a
+ * thermal printer configured with "cut after each page" in its driver settings.
+ *
+ * If you use QZ Tray for raw ESC/POS printing, replace the body of this
+ * function with your qz.api.print() full-cut sequence:
+ *   ESC i  →  [0x1B, 0x69]   (full cut)
+ *   or
+ *   ESC m  →  [0x1B, 0x6D]   (partial cut)
+ */
+function cutPaper(win) {
+    try {
+        // Append a page-break element — most thermal drivers issue a cut here
+        var cut = win.document.createElement('div');
+        cut.style.pageBreakAfter = 'always';
+        cut.style.breakAfter = 'page';
+        win.document.body.appendChild(cut);
+    } catch (e) {
+        // Window may already be closed — safe to ignore
+    }
+}
+
 
 $('#save-bill').click(function () {
     saveBill(false);
@@ -977,21 +1167,60 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function printBarcode(barcode, name, price) {
-    var printWindow = window.open('', '_blank', 'width=800,height=600');
-    printWindow.document.write('<html><head><title>Print Barcode</title>');
-    printWindow.document.write('<style>body { text-align: center; font-family: sans-serif; } svg { width: 80%; }</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write('<h3>' + name + '</h3>');
-    printWindow.document.write('<p>Price: ' + price + '</p>');
-    printWindow.document.write('<svg id="barcode"></svg>');
-    printWindow.document.write('<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>');
-    printWindow.document.write('<script>JsBarcode("#barcode", "' + barcode + '", { format: "CODE128", displayValue: true });</script>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    setTimeout(function() {
-        printWindow.print();
-    }, 500);
+    var win = window.open('', '_blank', 'width=600,height=800');
+    win.document.write('<html><head><title>Label</title>');
+    win.document.write('<style>');
+
+    // Label page size: 2in x 1in, no margins
+    win.document.write('@page{size:2in 1in;margin:0;}');
+    win.document.write('*{box-sizing:border-box;}');
+    win.document.write('body{margin:0;padding:0;font-family:Arial,sans-serif;}');
+
+    win.document.write('.label{width:2in;height:1in;display:flex;flex-direction:column;justify-content:space-between;padding:2px;}');
+
+    win.document.write('.barcodeBox{display:flex;justify-content:center;align-items:center;height:50%;}');
+    win.document.write('.barcodeBox svg{max-width:90%;max-height:100%;}');
+
+    win.document.write('.barcodeNum{text-align:center;font-size:11px;margin:0;white-space:nowrap;overflow:hidden;}');
+
+    win.document.write('.bottomRow{display:flex;justify-content:space-between;align-items:center;font-size:9px;width:100%;overflow:hidden;padding:0 3px;}');
+    win.document.write('.leftText{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;}');
+    win.document.write('.rightText{text-align:right;white-space:nowrap;flex-shrink:0;}');
+
+    win.document.write('</style>');
+    win.document.write('</head><body>');
+
+    win.document.write('<div class="label">');
+    win.document.write('  <div class="barcodeBox"><svg id="barcode"></svg></div>');
+    win.document.write('  <div class="barcodeNum">' + barcode + '</div>');
+    win.document.write('  <div class="bottomRow">');
+    win.document.write('    <div class="leftText">' + name + '</div>');
+    win.document.write('    <div class="rightText">' + price + ' PKR</div>');
+    win.document.write('  </div>');
+    win.document.write('</div>');
+
+    // JsBarcode — inline generation, no SVG file needed
+    win.document.write('<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>');
+    win.document.write('<script>');
+    win.document.write('JsBarcode("#barcode","' + barcode + '",{format:"CODE128",displayValue:false,margin:0,width:1.2,height:40});');
+    win.document.write('<\/script>');
+
+    win.document.write('</body></html>');
+    win.document.close();
+
+    // Wait for full load (scripts + rendering) then print
+    win.onload = function () {
+        win.focus();
+        win.print();
+    };
+
+    // Close window after printing
+    win.onafterprint = function () {
+        win.close();
+    };
 }
+
+
 
 function validateUserLogin() {
     const emailEl = document.getElementById('email');

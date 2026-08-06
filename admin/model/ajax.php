@@ -686,3 +686,117 @@ if (isset($_GET['action']) && $_GET['action'] == 'update_contact_section') {
         echo ($conn->query($insertQuery) === TRUE) ? "Contact section added successfully." : "An error occurred while adding the contact section.";
     }
 }
+
+
+// ===================== PLACE ORDER (CHECKOUT) =====================
+if (isset($_GET['action']) && $_GET['action'] == 'place_order') {
+    ob_clean();
+    header('Content-Type: application/json');
+
+    $firstName     = mysqli_real_escape_string($conn, $_POST['first_name']);
+    $lastName      = mysqli_real_escape_string($conn, $_POST['last_name']);
+    $email         = mysqli_real_escape_string($conn, $_POST['email']);
+    $phone         = mysqli_real_escape_string($conn, $_POST['phone']);
+    $address       = mysqli_real_escape_string($conn, $_POST['address']);
+    $city          = mysqli_real_escape_string($conn, $_POST['city']);
+    $state         = mysqli_real_escape_string($conn, $_POST['state']);
+    $paymentMethod = mysqli_real_escape_string($conn, $_POST['payment_method']);
+    $subtotal      = mysqli_real_escape_string($conn, $_POST['subtotal']);
+    $shippingCost  = mysqli_real_escape_string($conn, $_POST['shipping']);
+    $totalAmount   = mysqli_real_escape_string($conn, $_POST['total']);
+
+    // Never store the full card number/CVC — only the last 4 digits, for reference on the receipt.
+    $cardLastFour = "NULL";
+    if ($paymentMethod === 'card' && !empty($_POST['card_num'])) {
+        $digitsOnly = preg_replace('/\D/', '', $_POST['card_num']);
+        $cardLastFour = "'" . mysqli_real_escape_string($conn, substr($digitsOnly, -4)) . "'";
+    }
+
+    $cartItemsJson = isset($_POST['cart_items']) ? $_POST['cart_items'] : '[]';
+    $cartItems = json_decode($cartItemsJson, true);
+
+    if (empty($cartItems) || !is_array($cartItems)) {
+        echo json_encode(['status' => 'error', 'message' => 'Your cart is empty.']);
+        exit;
+    }
+
+    $orderNumber = 'ORD_' . time();
+
+    $orderInsertQuery = "INSERT INTO `orders`
+        (`order_number`, `first_name`, `last_name`, `email`, `phone`, `address`, `city`, `state`,
+         `payment_method`, `card_last_four`, `subtotal`, `shipping_cost`, `total_amount`)
+        VALUES
+        ('$orderNumber', '$firstName', '$lastName', '$email', '$phone', '$address', '$city', '$state',
+         '$paymentMethod', $cardLastFour, '$subtotal', '$shippingCost', '$totalAmount')";
+
+    if ($conn->query($orderInsertQuery) === TRUE) {
+        $orderId = $conn->insert_id;
+        $allItemsInserted = true;
+
+        foreach ($cartItems as $item) {
+            $productId    = (isset($item['id']) && $item['id'] !== '') ? "'" . mysqli_real_escape_string($conn, $item['id']) . "'" : "NULL";
+            $productName  = mysqli_real_escape_string($conn, $item['name']);
+            $productImage = mysqli_real_escape_string($conn, isset($item['image']) ? $item['image'] : '');
+            $size         = mysqli_real_escape_string($conn, isset($item['size']) ? $item['size'] : '');
+            $color        = mysqli_real_escape_string($conn, isset($item['color']) ? $item['color'] : '');
+            $qty          = intval($item['qty']);
+            $unitPrice    = mysqli_real_escape_string($conn, $item['price']);
+            $lineTotal    = $qty * (float) $item['price'];
+
+            $itemInsertQuery = "INSERT INTO `order_items`
+                (`order_id`, `product_id`, `product_name`, `product_image`, `size`, `color`, `quantity`, `unit_price`, `line_total`)
+                VALUES
+                ('$orderId', $productId, '$productName', '$productImage', '$size', '$color', '$qty', '$unitPrice', '$lineTotal')";
+
+            if ($conn->query($itemInsertQuery) !== TRUE) {
+                $allItemsInserted = false;
+            }
+        }
+
+        if ($allItemsInserted) {
+            // Email failure should never block the order confirmation response to the user.
+            sendOrderConfirmationEmail($conn, $orderId);
+
+            echo json_encode([
+                'status'       => 'success',
+                'message'      => 'Order placed successfully!',
+                'order_number' => $orderNumber
+            ]);
+        } else {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Order was created but some items failed to save. Please contact support with order ' . $orderNumber . '.'
+            ]);
+        }
+    } else {
+        echo json_encode([
+            'status'  => 'error',
+            'message' => 'An error occurred while placing the order: ' . $conn->error
+        ]);
+    }
+}
+
+// ===================== UPDATE ORDER STATUS (ADMIN) =====================
+if (isset($_GET['action']) && $_GET['action'] == 'update_order_status') {
+    ob_clean();
+
+    $orderId = isset($_POST['order_id']) ? $_POST['order_id'] : '';
+    $newStatus = isset($_POST['order_status']) ? $_POST['order_status'] : '';
+
+    $allowedStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+    if ($orderId === '' || !in_array($newStatus, $allowedStatuses, true)) {
+        echo "Invalid order or status.";
+        exit;
+    }
+
+    $statusUpdated = updateOrderStatus($conn, $orderId, $newStatus);
+
+    if ($statusUpdated) {
+        // Email failure should never block the success response to the admin.
+        sendOrderStatusUpdateEmail($conn, $orderId);
+        echo "Order status updated successfully.";
+    } else {
+        echo "An error occurred while updating the order status.";
+    }
+}

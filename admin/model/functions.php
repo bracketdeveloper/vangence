@@ -295,6 +295,7 @@ function generateBarcodeImage($barcodeNumber)
 //
 //    file_put_contents($path, $barcode);
 }
+
 function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
     // Decode the image JSON string to get the first image
     $images = json_decode($product['image'], true);
@@ -324,7 +325,7 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                     <?php echo htmlspecialchars($product['category_name']); ?>
                 </span>
                 <h3 class="product-card-title h6 mb-2 flex-grow-1">
-                    <a href="product.php?id=<?php echo $product['id']; ?>" class="text-decoration-none text-navy">
+                    <a href="product.php?product_id=<?php echo $product['product_id']; ?>" class="text-decoration-none text-navy">
                         <?php echo htmlspecialchars($product['product_name']); ?>
                     </a>
                 </h3>
@@ -333,7 +334,7 @@ function render_product_card($product, $colClass = 'col-6 col-md-4 col-lg-3') {
                         PKR <?php echo number_format($product['selling_price'], 2); ?>
                     </span>
                     <button class="btn btn-navy btn-xs btn-add-to-cart text-uppercase"
-                            data-id="<?php echo $product['id']; ?>"
+                            data-id="<?php echo $product['product_id']; ?>"
                             data-name="<?php echo htmlspecialchars($product['product_name']); ?>"
                             data-price="<?php echo $product['selling_price']; ?>"
                             data-image="<?php echo $displayImage; ?>"
@@ -463,6 +464,185 @@ function getContactSection($conn)
 
     return null;
 }
+
+// ===================== ORDERS (ADMIN) =====================
+function getAllOrdersForAdmin($conn)
+{
+    $query = "SELECT * FROM `orders` ORDER BY `created_at` DESC";
+    return runSelectQuery($conn, $query);
+}
+
+function getOrderByIdForAdmin($conn, $orderId)
+{
+    $orderId = mysqli_real_escape_string($conn, $orderId);
+    $query = "SELECT * FROM `orders` WHERE `order_id` = '$orderId'";
+    return runSelectQuery($conn, $query);
+}
+
+function getOrderItemsByOrderId($conn, $orderId)
+{
+    $orderId = mysqli_real_escape_string($conn, $orderId);
+    $query = "SELECT * FROM `order_items` WHERE `order_id` = '$orderId'";
+    return runSelectQuery($conn, $query);
+}
+
+function updateOrderStatus($conn, $orderId, $status)
+{
+    $orderId = mysqli_real_escape_string($conn, $orderId);
+    $status = mysqli_real_escape_string($conn, $status);
+    $query = "UPDATE `orders` SET `order_status` = '$status' WHERE `order_id` = '$orderId'";
+    return $conn->query($query);
+}
+
+// ===================== EMAIL NOTIFICATIONS =====================
+
+// Low-level sender. Both template functions below call this — SMTP setup
+// lives here ONLY, so it never gets duplicated.
+function sendEmail($to, $toName, $subject, $htmlBody)
+{
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'orders@vangence.com';
+        $mail->Password   = 'YOUR_16_CHAR_APP_PASSWORD';
+        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+
+        $mail->setFrom('orders@vangence.com', 'Vangence');
+        $mail->addAddress($to, $toName);
+
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $htmlBody;
+
+        $mail->send();
+        return true;
+    } catch (\Exception $e) {
+        error_log("Email could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        return false;
+    }
+}
+
+// Shared email header/footer wrapper so both templates look consistent.
+function getEmailWrapper($innerHtml)
+{
+    return "
+    <div style=\"font-family: Arial, Helvetica, sans-serif; max-width:600px; margin:auto; border:1px solid #eee;\">
+        <div style=\"background:#1a2b49; padding:24px; text-align:center;\">
+            <h1 style=\"color:#ffffff; letter-spacing:3px; font-size:20px; margin:0; text-transform:uppercase;\">Vangence</h1>
+        </div>
+        <div style=\"padding:28px 24px;\">
+            {$innerHtml}
+        </div>
+        <div style=\"background:#f7f7f7; padding:16px; text-align:center; font-size:12px; color:#999;\">
+            &copy; " . date('Y') . " Vangence. All rights reserved.<br>
+            This is an automated message, please do not reply directly to this email.
+        </div>
+    </div>";
+}
+
+// Sends the full order-confirmation email — called right after an order is placed.
+function sendOrderConfirmationEmail($conn, $orderId)
+{
+    $orderResult = getOrderByIdForAdmin($conn, $orderId);
+    if (empty($orderResult)) {
+        return false;
+    }
+    $o = $orderResult[0];
+    $items = getOrderItemsByOrderId($conn, $orderId);
+
+    $itemsHtml = '';
+    foreach ($items as $item) {
+        $itemsHtml .= "
+        <tr>
+            <td style=\"padding:10px 0; border-bottom:1px solid #eee;\">
+                " . htmlspecialchars($item['product_name']) . "<br>
+                <span style=\"font-size:12px; color:#888;\">Size: " . htmlspecialchars($item['size']) . " | Color: " . htmlspecialchars($item['color']) . " | Qty: " . (int) $item['quantity'] . "</span>
+            </td>
+            <td style=\"padding:10px 0; border-bottom:1px solid #eee; text-align:right; white-space:nowrap;\">
+                PKR " . number_format($item['line_total'], 2) . "
+            </td>
+        </tr>";
+    }
+
+    $paymentLabel = $o['payment_method'] === 'cod' ? 'Cash on Delivery' : 'Credit Card';
+
+    $inner = "
+        <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Thank you for your order, " . htmlspecialchars($o['first_name']) . "!</h2>
+        <p style=\"color:#555; font-size:14px; line-height:1.5;\">We've received your order and it's being processed. Here's a summary:</p>
+
+        <table style=\"width:100%; margin:16px 0; font-size:13px; color:#555;\">
+            <tr><td>Order Number</td><td style=\"text-align:right; font-weight:bold; color:#1a2b49;\">" . htmlspecialchars($o['order_number']) . "</td></tr>
+            <tr><td>Order Date</td><td style=\"text-align:right;\">" . date('d M Y, h:i A', strtotime($o['created_at'])) . "</td></tr>
+            <tr><td>Payment Method</td><td style=\"text-align:right;\">{$paymentLabel}</td></tr>
+        </table>
+
+        <table style=\"width:100%; border-collapse:collapse; font-size:13px; color:#333;\">
+            {$itemsHtml}
+        </table>
+
+        <table style=\"width:100%; margin-top:16px; font-size:13px; color:#555;\">
+            <tr><td style=\"padding:4px 0;\">Subtotal</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format($o['subtotal'], 2) . "</td></tr>
+            <tr><td style=\"padding:4px 0;\">Shipping</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format($o['shipping_cost'], 2) . "</td></tr>
+            <tr>
+                <td style=\"font-weight:bold; padding-top:10px; border-top:1px solid #ddd;\">Total</td>
+                <td style=\"text-align:right; font-weight:bold; padding-top:10px; border-top:1px solid #ddd; color:#1a2b49;\">PKR " . number_format($o['total_amount'], 2) . "</td>
+            </tr>
+        </table>
+
+        <h3 style=\"color:#1a2b49; font-size:15px; margin-top:28px; margin-bottom:6px;\">Shipping To</h3>
+        <p style=\"color:#555; font-size:13px; line-height:1.6; margin:0;\">
+            " . htmlspecialchars($o['first_name'] . ' ' . $o['last_name']) . "<br>
+            " . htmlspecialchars($o['address']) . "<br>
+            " . htmlspecialchars($o['city'] . ', ' . $o['state']) . "<br>
+            " . htmlspecialchars($o['phone']) . "
+        </p>
+    ";
+
+    return sendEmail(
+            $o['email'],
+            $o['first_name'] . ' ' . $o['last_name'],
+            "Order Confirmed \u2014 " . $o['order_number'],
+            getEmailWrapper($inner)
+    );
+}
+
+// Sends a short status-update email — called whenever the admin changes order_status.
+function sendOrderStatusUpdateEmail($conn, $orderId)
+{
+    $orderResult = getOrderByIdForAdmin($conn, $orderId);
+    if (empty($orderResult)) {
+        return false;
+    }
+    $o = $orderResult[0];
+
+    $statusMessages = [
+            'pending'    => 'Your order is pending confirmation.',
+            'processing' => 'Your order is being processed and prepared for shipment.',
+            'shipped'    => 'Your order is on its way!',
+            'delivered'  => 'Your order has been delivered. We hope you enjoy it!',
+            'cancelled'  => 'Your order has been cancelled.',
+    ];
+    $statusMessage = $statusMessages[$o['order_status']] ?? 'Your order status has been updated.';
+
+    $inner = "
+        <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Order Update</h2>
+        <p style=\"color:#555; font-size:14px; line-height:1.5;\">
+            Hi " . htmlspecialchars($o['first_name']) . ", your order <strong>" . htmlspecialchars($o['order_number']) . "</strong> status has changed to:
+        </p>
+        <p style=\"display:inline-block; background:#1a2b49; color:#ffffff; padding:6px 18px; border-radius:4px; text-transform:uppercase; font-size:13px; letter-spacing:1px; margin:8px 0;\">
+            " . htmlspecialchars($o['order_status']) . "
+        </p>
+        <p style=\"color:#555; font-size:14px; line-height:1.5; margin-top:16px;\">{$statusMessage}</p>
+    ";
+
+    return sendEmail(
+            $o['email'],
+            $o['first_name'] . ' ' . $o['last_name'],
+            "Order " . $o['order_number'] . " \u2014 Status Update",
+            getEmailWrapper($inner)
+    );
+}
 ?>
-
-
