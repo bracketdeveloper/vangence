@@ -1,4 +1,12 @@
 {
+    "name": "vangence/admin",
+    "description": "Admin panel for vangence ecommerce",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mian Ammar Salar"
+        }
+    ],
     "require": {
         "phpmailer/phpmailer": "^7.1"
     }
