@@ -504,202 +504,409 @@ function updateOrderStatus($conn, $orderId, $status)
 
 // ===================== EMAIL NOTIFICATIONS =====================
 
-// Low-level sender. Both template functions below call this — SMTP setup
-// lives here ONLY, so it never gets duplicated.
-//
-// IMPORTANT: this requires PHPMailer. If the vendor/ folder is not present on
-// the server (composer install was never run there), PHPMailer won't be loaded
-// and NO email will be sent — the order itself still succeeds, which is why
-// you see "order placed but no email". Run this once on the server:
-//     composer require phpmailer/phpmailer
-// As a safety net, if PHPMailer is genuinely unavailable we fall back to
-// PHP's built-in mail() so at least something goes out instead of silence.
-function sendEmail($to, $toName, $subject, $htmlBody)
+function getMailEnv()
 {
-    // Load credentials from .env — keeps secrets out of version control.
-    // INI_SCANNER_RAW stops parse_ini_file from mangling values that contain
-    // special characters (e.g. the @ in the mailbox password).
+    static $env = null;
+    if ($env !== null) {
+        return $env;
+    }
+
     $envPath = __DIR__ . '/.env';
     $env = file_exists($envPath) ? parse_ini_file($envPath, false, INI_SCANNER_RAW) : [];
-
-    $mailHost     = isset($env['MAIL_HOST'])     ? trim($env['MAIL_HOST'])     : '';
-    $mailUsername = isset($env['MAIL_USERNAME']) ? trim($env['MAIL_USERNAME']) : '';
-    $mailPassword = isset($env['MAIL_PASSWORD']) ? trim($env['MAIL_PASSWORD']) : '';
-    $mailPort     = isset($env['MAIL_PORT'])     ? intval($env['MAIL_PORT'])   : 587;
-    $mailFromName = isset($env['MAIL_FROM_NAME']) ? trim($env['MAIL_FROM_NAME']) : '';
-
-    // ---- Preferred path: PHPMailer over SMTP ----
-    if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host       = $mailHost;
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $mailUsername;
-            $mail->Password   = $mailPassword;
-            $mail->Port       = $mailPort;
-            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            // Let PHPMailer upgrade plain connections to TLS automatically if the
-            // server advertises it — prevents silent handshake failures on port 587.
-            $mail->SMTPAutoTLS = true;
-            $mail->CharSet    = 'UTF-8';
-            $mail->Encoding   = 'base64';
-
-            $mail->setFrom($mailUsername, $mailFromName);
-            $mail->addAddress($to, $toName);
-
-            $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body    = $htmlBody;
-            // Plain-text fallback for email clients that don't render HTML.
-            $mail->AltBody = strip_tags($htmlBody);
-
-            $mail->send();
-            return true;
-        } catch (\Throwable $e) {
-            // Log the full reason so you can actually see why it failed instead
-            // of guessing. Check your PHP error log.
-            error_log('sendEmail SMTP failed: ' . $e->getMessage() . ' | Mailer Error: ' . (isset($mail) ? $mail->ErrorInfo : ''));
-            // Fall through to the mail() fallback below — don't give up silently.
-        }
-    } else {
-        error_log('sendEmail: PHPMailer is not available (vendor/autoload.php missing or composer install not run). Falling back to mail().');
+    if (!is_array($env)) {
+        $env = [];
     }
 
-    // ---- Fallback path: PHP built-in mail() ----
-    // Used only if PHPMailer isn't installed OR SMTP threw. Requires a working
-    // MTA (sendmail/postfix) on the server. Returns true/false; we log the
-    // outcome either way so you can trace what happened.
-    $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . ($mailFromName !== '' ? $mailFromName . ' <' . $mailUsername . '>' : $mailUsername),
-    ];
-    $ok = @mail($to, $subject, $htmlBody, implode("\r\n", $headers));
-    if (!$ok) {
-        error_log('sendEmail mail() fallback also failed for: ' . $to);
-    }
-    return $ok;
+    return $env;
 }
 
-// Shared email header/footer wrapper so both templates look consistent.
-function getEmailWrapper($innerHtml)
+function getSiteUrl(array $env = null)
+{
+    $env = $env ?? getMailEnv();
+    $url = trim($env['SITE_URL'] ?? 'https://www.vangence.com');
+
+    return rtrim($url, '/');
+}
+
+function getSupportEmail(array $env = null)
+{
+    $env = $env ?? getMailEnv();
+
+    return $env['SUPPORT_EMAIL'] ?? ($env['MAIL_USERNAME'] ?? 'concierge@vangence.com');
+}
+
+function getAdminEmail(array $env = null)
+{
+    $env = $env ?? getMailEnv();
+
+    return $env['MAIL_ADMIN'] ?? 'admin@vangence.com';
+}
+
+function getOrderConfirmationUrl($orderNumber, array $env = null)
+{
+    return getSiteUrl($env) . '/order-confirmation.php?order=' . urlencode($orderNumber);
+}
+
+function getAdminOrderUrl($orderId, array $env = null)
+{
+    return getSiteUrl($env) . '/admin/order-details.php?order_id=' . urlencode((string) $orderId);
+}
+
+function buildOrderItemsTableHtml(array $items)
+{
+    $itemsHtml = '';
+    foreach ($items as $item) {
+        $itemsHtml .= "
+        <tr>
+            <td style=\"padding:12px 0; border-bottom:1px solid #eee;\">
+                <strong style=\"color:#1a2b49;\">" . htmlspecialchars($item['product_name']) . "</strong><br>
+                <span style=\"font-size:12px; color:#888;\">Size: " . htmlspecialchars($item['size']) . " &nbsp;|&nbsp; Color: " . htmlspecialchars($item['color']) . " &nbsp;|&nbsp; Qty: " . (int) $item['quantity'] . "</span>
+            </td>
+            <td style=\"padding:12px 0; border-bottom:1px solid #eee; text-align:right; white-space:nowrap; vertical-align:top;\">
+                PKR " . number_format((float) $item['line_total'], 2) . "
+            </td>
+        </tr>";
+    }
+
+    return $itemsHtml;
+}
+
+function getPaymentMethodLabel($paymentMethod)
+{
+    return $paymentMethod === 'cod' ? 'Cash on Delivery' : 'Credit / Debit Card';
+}
+
+function getEmailButtonHtml($url, $label)
 {
     return "
-    <div style=\"font-family: Arial, Helvetica, sans-serif; max-width:600px; margin:auto; border:1px solid #eee;\">
-        <div style=\"background:#1a2b49; padding:24px; text-align:center;\">
-            <h1 style=\"color:#ffffff; letter-spacing:3px; font-size:20px; margin:0; text-transform:uppercase;\">Vangence</h1>
+        <p style=\"text-align:center; margin:28px 0;\">
+            <a href=\"" . htmlspecialchars($url) . "\"
+               style=\"display:inline-block; background:#1a2b49; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:14px; font-weight:bold; letter-spacing:0.5px;\">
+                {$label}
+            </a>
+        </p>";
+}
+
+function getEmailWrapper($innerHtml, array $env = null)
+{
+    $env = $env ?? getMailEnv();
+    $siteUrl = getSiteUrl($env);
+    $supportEmail = getSupportEmail($env);
+    $year = date('Y');
+
+    return "
+    <div style=\"font-family: Arial, Helvetica, sans-serif; max-width:620px; margin:auto; border:1px solid #e8e8e8; background:#ffffff;\">
+        <div style=\"background:#1a2b49; padding:28px 24px; text-align:center;\">
+            <a href=\"{$siteUrl}\" style=\"text-decoration:none;\">
+                <h1 style=\"color:#ffffff; letter-spacing:4px; font-size:22px; margin:0; text-transform:uppercase; font-weight:600;\">Vangence</h1>
+                <p style=\"color:rgba(255,255,255,0.75); font-size:11px; margin:8px 0 0; letter-spacing:2px; text-transform:uppercase;\">Premium Atelier</p>
+            </a>
         </div>
-        <div style=\"padding:28px 24px;\">
+        <div style=\"padding:32px 28px;\">
             {$innerHtml}
         </div>
-        <div style=\"background:#f7f7f7; padding:16px; text-align:center; font-size:12px; color:#999;\">
-            &copy; " . date('Y') . " Vangence. All rights reserved.<br>
-            This is an automated message, please do not reply directly to this email.
+        <div style=\"background:#f7f7f7; padding:20px 24px; text-align:center; font-size:12px; color:#888; line-height:1.7; border-top:1px solid #eee;\">
+            &copy; {$year} Vangence. All rights reserved.<br>
+            <a href=\"{$siteUrl}\" style=\"color:#1a2b49; text-decoration:none;\">www.vangence.com</a><br>
+            Questions? Contact us at <a href=\"mailto:{$supportEmail}\" style=\"color:#1a2b49;\">{$supportEmail}</a>
         </div>
     </div>";
 }
 
-// Sends the full order-confirmation email — called right after an order is placed.
+function createConfiguredMailer(array $env)
+{
+    if (!class_exists('\PHPMailer\PHPMailer\PHPMailer')) {
+        throw new RuntimeException('PHPMailer is not loaded. Ensure admin/vendor/ is deployed on the server.');
+    }
+
+    $mailHost = trim($env['MAIL_HOST'] ?? '');
+    $mailUsername = trim($env['MAIL_USERNAME'] ?? '');
+    $mailPassword = $env['MAIL_PASSWORD'] ?? '';
+    $mailPort = isset($env['MAIL_PORT']) ? (int) $env['MAIL_PORT'] : 465;
+    $mailFromName = $env['MAIL_FROM_NAME'] ?? 'Vangence';
+    $encryption = strtolower(trim($env['MAIL_ENCRYPTION'] ?? ($mailPort === 587 ? 'tls' : 'ssl')));
+
+    if ($mailHost === '' || $mailUsername === '' || $mailPassword === '') {
+        throw new RuntimeException('Missing SMTP configuration in admin/model/.env');
+    }
+
+    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host = $mailHost;
+    $mail->SMTPAuth = true;
+    $mail->Username = $mailUsername;
+    $mail->Password = $mailPassword;
+    $mail->Port = $mailPort;
+    $mail->Timeout = 20;
+    $mail->CharSet = 'UTF-8';
+
+    if ($encryption === 'tls') {
+        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    } elseif ($encryption === 'ssl') {
+        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+    } else {
+        $mail->SMTPSecure = false;
+        $mail->SMTPAutoTLS = false;
+    }
+
+    $mail->setFrom($mailUsername, $mailFromName);
+
+    return $mail;
+}
+
+function sendEmail($to, $toName, $subject, $htmlBody, $replyToEmail = null, $replyToName = null)
+{
+    $env = getMailEnv();
+    $to = preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', trim($to));
+
+    if ($to === '') {
+        error_log('sendEmail: empty recipient address');
+        return false;
+    }
+
+    try {
+        $mail = createConfiguredMailer($env);
+        $mail->addAddress($to, $toName);
+        $mail->addReplyTo($replyToEmail ?: getSupportEmail($env), $replyToName ?: 'Vangence Support');
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $htmlBody;
+        $mail->AltBody = trim(preg_replace('/\s+/', ' ', strip_tags($htmlBody)));
+        $mail->addCustomHeader('X-Mailer', 'Vangence-Orders');
+        $mail->send();
+
+        error_log('Email sent to: ' . $to . ' | Subject: ' . $subject);
+        return true;
+    } catch (\Throwable $e) {
+        $detail = ($e instanceof \PHPMailer\PHPMailer\Exception && isset($mail))
+            ? $mail->ErrorInfo
+            : $e->getMessage();
+        error_log('sendEmail ERROR for ' . $to . ': ' . $detail);
+        return false;
+    }
+}
+
+function sendEmailWithFallback($to, $toName, $subject, $htmlBody, $replyToEmail = null, $replyToName = null)
+{
+    if (sendEmail($to, $toName, $subject, $htmlBody, $replyToEmail, $replyToName)) {
+        return true;
+    }
+
+    $env = getMailEnv();
+    $currentPort = isset($env['MAIL_PORT']) ? (int) $env['MAIL_PORT'] : 465;
+    $currentEncryption = strtolower(trim($env['MAIL_ENCRYPTION'] ?? ($currentPort === 587 ? 'tls' : 'ssl')));
+
+    $fallbackProfiles = [
+        ['port' => 587, 'encryption' => 'tls'],
+        ['port' => 465, 'encryption' => 'ssl'],
+    ];
+
+    foreach ($fallbackProfiles as $profile) {
+        if ($currentPort === $profile['port'] && $currentEncryption === $profile['encryption']) {
+            continue;
+        }
+
+        $fallbackEnv = $env;
+        $fallbackEnv['MAIL_PORT'] = (string) $profile['port'];
+        $fallbackEnv['MAIL_ENCRYPTION'] = $profile['encryption'];
+
+        try {
+            $mail = createConfiguredMailer($fallbackEnv);
+            $mail->addAddress($to, $toName);
+            $mail->addReplyTo($replyToEmail ?: getSupportEmail($env), $replyToName ?: 'Vangence Support');
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $htmlBody;
+            $mail->AltBody = trim(preg_replace('/\s+/', ' ', strip_tags($htmlBody)));
+            $mail->addCustomHeader('X-Mailer', 'Vangence-Orders');
+            $mail->send();
+
+            error_log('Email sent via fallback SMTP (port ' . $profile['port'] . '/' . $profile['encryption'] . ') to: ' . $to);
+            return true;
+        } catch (\Throwable $e) {
+            $detail = ($e instanceof \PHPMailer\PHPMailer\Exception && isset($mail))
+                ? $mail->ErrorInfo
+                : $e->getMessage();
+            error_log('sendEmail fallback ERROR (' . $profile['port'] . '/' . $profile['encryption'] . ') for ' . $to . ': ' . $detail);
+        }
+    }
+
+    return false;
+}
+
+function buildOrderEmailSummaryHtml(array $o, array $items, array $env = null)
+{
+    $env = $env ?? getMailEnv();
+    $itemsHtml = buildOrderItemsTableHtml($items);
+    $paymentLabel = getPaymentMethodLabel($o['payment_method']);
+    $orderDate = date('d M Y, h:i A', strtotime($o['created_at']));
+    $statusLabel = strtoupper(htmlspecialchars($o['order_status'] ?? 'pending'));
+
+    return "
+        <table style=\"width:100%; margin:0 0 20px; font-size:13px; color:#555; border-collapse:collapse;\">
+            <tr><td style=\"padding:6px 0;\">Order Number</td><td style=\"text-align:right; font-weight:bold; color:#1a2b49;\">" . htmlspecialchars($o['order_number']) . "</td></tr>
+            <tr><td style=\"padding:6px 0;\">Order Date</td><td style=\"text-align:right;\">{$orderDate}</td></tr>
+            <tr><td style=\"padding:6px 0;\">Payment Method</td><td style=\"text-align:right;\">{$paymentLabel}</td></tr>
+            <tr><td style=\"padding:6px 0;\">Status</td><td style=\"text-align:right; text-transform:uppercase; font-weight:600;\">{$statusLabel}</td></tr>
+        </table>
+
+        <h3 style=\"color:#1a2b49; font-size:14px; margin:24px 0 10px; text-transform:uppercase; letter-spacing:1px;\">Items Ordered</h3>
+        <table style=\"width:100%; border-collapse:collapse; font-size:13px; color:#333;\">
+            {$itemsHtml}
+        </table>
+
+        <table style=\"width:100%; margin-top:18px; font-size:13px; color:#555;\">
+            <tr><td style=\"padding:4px 0;\">Subtotal</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format((float) $o['subtotal'], 2) . "</td></tr>
+            <tr><td style=\"padding:4px 0;\">Shipping</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format((float) $o['shipping_cost'], 2) . "</td></tr>
+            <tr>
+                <td style=\"font-weight:bold; padding-top:10px; border-top:1px solid #ddd;\">Total</td>
+                <td style=\"text-align:right; font-weight:bold; padding-top:10px; border-top:1px solid #ddd; color:#1a2b49; font-size:15px;\">PKR " . number_format((float) $o['total_amount'], 2) . "</td>
+            </tr>
+        </table>
+
+        <h3 style=\"color:#1a2b49; font-size:14px; margin:28px 0 8px; text-transform:uppercase; letter-spacing:1px;\">Shipping Address</h3>
+        <p style=\"color:#555; font-size:13px; line-height:1.7; margin:0; background:#fafafa; padding:14px 16px; border-radius:4px;\">
+            " . htmlspecialchars($o['first_name'] . ' ' . $o['last_name']) . "<br>
+            " . htmlspecialchars($o['address']) . "<br>
+            " . htmlspecialchars($o['city'] . ', ' . $o['state']) . "<br>
+            Phone: " . htmlspecialchars($o['phone']) . "<br>
+            Email: " . htmlspecialchars($o['email']) . "
+        </p>";
+}
+
+function sendAdminNewOrderNotificationEmail($conn, $orderId)
+{
+    $orderResult = getOrderByIdForAdmin($conn, $orderId);
+    if (empty($orderResult)) {
+        return false;
+    }
+
+    $env = getMailEnv();
+    $adminEmail = getAdminEmail($env);
+    $o = $orderResult[0];
+    $items = getOrderItemsByOrderId($conn, $orderId);
+    $summaryHtml = buildOrderEmailSummaryHtml($o, $items, $env);
+    $adminOrderUrl = getAdminOrderUrl($orderId, $env);
+    $customerName = htmlspecialchars($o['first_name'] . ' ' . $o['last_name']);
+
+    $inner = "
+        <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">New Order Received</h2>
+        <p style=\"color:#555; font-size:14px; line-height:1.6;\">
+            A new order has been placed on <strong>Vangence</strong>. Please review and process it in the admin panel.
+        </p>
+        <p style=\"color:#555; font-size:14px;\">
+            Customer: <strong>{$customerName}</strong><br>
+            Order: <strong>" . htmlspecialchars($o['order_number']) . "</strong>
+        </p>
+        {$summaryHtml}
+        " . getEmailButtonHtml($adminOrderUrl, 'View Order in Admin') . "
+        <p style=\"font-size:12px; color:#999; text-align:center; margin:0;\">
+            Admin link: <a href=\"" . htmlspecialchars($adminOrderUrl) . "\" style=\"color:#1a2b49;\">" . htmlspecialchars($adminOrderUrl) . "</a>
+        </p>";
+
+    return sendEmailWithFallback(
+        $adminEmail,
+        'Vangence Admin',
+        'New Order: ' . $o['order_number'] . ' — PKR ' . number_format((float) $o['total_amount'], 2),
+        getEmailWrapper($inner, $env)
+    );
+}
+
 function sendOrderConfirmationEmail($conn, $orderId)
 {
     $orderResult = getOrderByIdForAdmin($conn, $orderId);
     if (empty($orderResult)) {
         return false;
     }
+
+    $env = getMailEnv();
     $o = $orderResult[0];
     $items = getOrderItemsByOrderId($conn, $orderId);
-
-    $itemsHtml = '';
-    foreach ($items as $item) {
-        $itemsHtml .= "
-        <tr>
-            <td style=\"padding:10px 0; border-bottom:1px solid #eee;\">
-                " . htmlspecialchars($item['product_name']) . "<br>
-                <span style=\"font-size:12px; color:#888;\">Size: " . htmlspecialchars($item['size']) . " | Color: " . htmlspecialchars($item['color']) . " | Qty: " . (int) $item['quantity'] . "</span>
-            </td>
-            <td style=\"padding:10px 0; border-bottom:1px solid #eee; text-align:right; white-space:nowrap;\">
-                PKR " . number_format($item['line_total'], 2) . "
-            </td>
-        </tr>";
-    }
-
-    $paymentLabel = $o['payment_method'] === 'cod' ? 'Cash on Delivery' : 'Credit Card';
+    $summaryHtml = buildOrderEmailSummaryHtml($o, $items, $env);
+    $trackingUrl = getOrderConfirmationUrl($o['order_number'], $env);
+    $supportEmail = getSupportEmail($env);
 
     $inner = "
         <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Thank you for your order, " . htmlspecialchars($o['first_name']) . "!</h2>
-        <p style=\"color:#555; font-size:14px; line-height:1.5;\">We've received your order and it's being processed. Here's a summary:</p>
-
-        <table style=\"width:100%; margin:16px 0; font-size:13px; color:#555;\">
-            <tr><td>Order Number</td><td style=\"text-align:right; font-weight:bold; color:#1a2b49;\">" . htmlspecialchars($o['order_number']) . "</td></tr>
-            <tr><td>Order Date</td><td style=\"text-align:right;\">" . date('d M Y, h:i A', strtotime($o['created_at'])) . "</td></tr>
-            <tr><td>Payment Method</td><td style=\"text-align:right;\">{$paymentLabel}</td></tr>
-        </table>
-
-        <table style=\"width:100%; border-collapse:collapse; font-size:13px; color:#333;\">
-            {$itemsHtml}
-        </table>
-
-        <table style=\"width:100%; margin-top:16px; font-size:13px; color:#555;\">
-            <tr><td style=\"padding:4px 0;\">Subtotal</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format($o['subtotal'], 2) . "</td></tr>
-            <tr><td style=\"padding:4px 0;\">Shipping</td><td style=\"text-align:right; padding:4px 0;\">PKR " . number_format($o['shipping_cost'], 2) . "</td></tr>
-            <tr>
-                <td style=\"font-weight:bold; padding-top:10px; border-top:1px solid #ddd;\">Total</td>
-                <td style=\"text-align:right; font-weight:bold; padding-top:10px; border-top:1px solid #ddd; color:#1a2b49;\">PKR " . number_format($o['total_amount'], 2) . "</td>
-            </tr>
-        </table>
-
-        <h3 style=\"color:#1a2b49; font-size:15px; margin-top:28px; margin-bottom:6px;\">Shipping To</h3>
-        <p style=\"color:#555; font-size:13px; line-height:1.6; margin:0;\">
-            " . htmlspecialchars($o['first_name'] . ' ' . $o['last_name']) . "<br>
-            " . htmlspecialchars($o['address']) . "<br>
-            " . htmlspecialchars($o['city'] . ', ' . $o['state']) . "<br>
-            " . htmlspecialchars($o['phone']) . "
+        <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+            We have received your order and our team is preparing it with care. You will receive another email when your order status changes or when it ships.
         </p>
-    ";
+        <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+            If you selected Cash on Delivery, please keep the exact amount ready at the time of delivery.
+        </p>
+        {$summaryHtml}
+        " . getEmailButtonHtml($trackingUrl, 'View Your Order') . "
+        <p style=\"font-size:13px; color:#777; line-height:1.6; margin-top:24px;\">
+            You can bookmark your order page to check status anytime:<br>
+            <a href=\"" . htmlspecialchars($trackingUrl) . "\" style=\"color:#1a2b49;\">" . htmlspecialchars($trackingUrl) . "</a>
+        </p>
+        <p style=\"font-size:13px; color:#777; line-height:1.6;\">
+            Need assistance? Email us at <a href=\"mailto:{$supportEmail}\" style=\"color:#1a2b49;\">{$supportEmail}</a> and include your order number <strong>" . htmlspecialchars($o['order_number']) . "</strong>.
+        </p>";
 
-    return sendEmail(
-            $o['email'],
-            $o['first_name'] . ' ' . $o['last_name'],
-            "Order Confirmed \u2014 " . $o['order_number'],
-            getEmailWrapper($inner)
+    $customerSent = sendEmailWithFallback(
+        $o['email'],
+        $o['first_name'] . ' ' . $o['last_name'],
+        'Order Confirmed — ' . $o['order_number'] . ' | Vangence',
+        getEmailWrapper($inner, $env)
     );
+
+    $adminSent = sendAdminNewOrderNotificationEmail($conn, $orderId);
+    error_log('New order emails for ' . $o['order_number'] . ' — customer: ' . ($customerSent ? 'SUCCESS' : 'FAILED') . ', admin: ' . ($adminSent ? 'SUCCESS' : 'FAILED'));
+
+    return $customerSent;
 }
 
-// Sends a short status-update email — called whenever the admin changes order_status.
 function sendOrderStatusUpdateEmail($conn, $orderId)
 {
     $orderResult = getOrderByIdForAdmin($conn, $orderId);
     if (empty($orderResult)) {
+        error_log('Order not found for status email: ' . $orderId);
         return false;
     }
+
+    $env = getMailEnv();
     $o = $orderResult[0];
+    $trackingUrl = getOrderConfirmationUrl($o['order_number'], $env);
+    $supportEmail = getSupportEmail($env);
 
     $statusMessages = [
-            'pending'    => 'Your order is pending confirmation.',
-            'processing' => 'Your order is being processed and prepared for shipment.',
-            'shipped'    => 'Your order is on its way!',
-            'delivered'  => 'Your order has been delivered. We hope you enjoy it!',
-            'cancelled'  => 'Your order has been cancelled.',
+        'pending'    => 'Your order is awaiting confirmation. We will notify you as soon as it moves to processing.',
+        'processing' => 'Great news — your order is now being prepared in our atelier and will ship soon.',
+        'shipped'    => 'Your order is on its way. You will receive delivery updates from our courier partner shortly.',
+        'delivered'  => 'Your order has been delivered. We hope you enjoy your Vangence pieces. Thank you for shopping with us.',
+        'cancelled'  => 'Your order has been cancelled. If this was unexpected or you need help placing a new order, please contact us.',
     ];
+
     $statusMessage = $statusMessages[$o['order_status']] ?? 'Your order status has been updated.';
+    $statusLabel = strtoupper(htmlspecialchars($o['order_status']));
 
     $inner = "
-        <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Order Update</h2>
-        <p style=\"color:#555; font-size:14px; line-height:1.5;\">
-            Hi " . htmlspecialchars($o['first_name']) . ", your order <strong>" . htmlspecialchars($o['order_number']) . "</strong> status has changed to:
+        <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Your Order Has Been Updated</h2>
+        <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+            Hi " . htmlspecialchars($o['first_name']) . ",
         </p>
-        <p style=\"display:inline-block; background:#1a2b49; color:#ffffff; padding:6px 18px; border-radius:4px; text-transform:uppercase; font-size:13px; letter-spacing:1px; margin:8px 0;\">
-            " . htmlspecialchars($o['order_status']) . "
+        <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+            The status of your order <strong>" . htmlspecialchars($o['order_number']) . "</strong> has changed.
         </p>
-        <p style=\"color:#555; font-size:14px; line-height:1.5; margin-top:16px;\">{$statusMessage}</p>
-    ";
+        <p style=\"text-align:center; margin:20px 0;\">
+            <span style=\"display:inline-block; background:#1a2b49; color:#ffffff; padding:8px 22px; border-radius:4px; font-size:13px; font-weight:bold; letter-spacing:1px;\">
+                {$statusLabel}
+            </span>
+        </p>
+        <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+            {$statusMessage}
+        </p>
+        " . getEmailButtonHtml($trackingUrl, 'Track Your Order') . "
+        <p style=\"font-size:13px; color:#777; line-height:1.6;\">
+            Questions about this update? Contact <a href=\"mailto:{$supportEmail}\" style=\"color:#1a2b49;\">{$supportEmail}</a> and reference order <strong>" . htmlspecialchars($o['order_number']) . "</strong>.
+        </p>";
 
-    return sendEmail(
-            $o['email'],
-            $o['first_name'] . ' ' . $o['last_name'],
-            "Order " . $o['order_number'] . " \u2014 Status Update",
-            getEmailWrapper($inner)
+    return sendEmailWithFallback(
+        $o['email'],
+        $o['first_name'] . ' ' . $o['last_name'],
+        'Order Update — ' . $statusLabel . ' | ' . $o['order_number'],
+        getEmailWrapper($inner, $env)
     );
 }
 ?>

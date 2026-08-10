@@ -770,7 +770,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'place_order') {
             if ($allItemsInserted) {
                 // Email failure should never block the order confirmation response to the user.
                 try {
-                    sendOrderConfirmationEmail($conn, $orderId);
+                    $orderEmailSent = sendOrderConfirmationEmail($conn, $orderId);
+                    error_log('Order confirmation email result for order ' . $orderId . ': ' . ($orderEmailSent ? 'CUSTOMER SUCCESS' : 'CUSTOMER FAILED'));
                 } catch (\Throwable $emailError) {
                     error_log('Order confirmation email failed for order ' . $orderId . ': ' . $emailError->getMessage());
                 }
@@ -824,7 +825,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'update_order_status') {
     if ($statusUpdated) {
         // Email failure should never block the success response to the admin.
         try {
-            sendOrderStatusUpdateEmail($conn, $orderId);
+            $orderResult = getOrderByIdForAdmin($conn, $orderId);
+            $customerEmail = !empty($orderResult) ? $orderResult[0]['email'] : 'unknown';
+            $emailSent = sendOrderStatusUpdateEmail($conn, $orderId);
+            error_log('Order status update email result for order ' . $orderId . ' to ' . $customerEmail . ': ' . ($emailSent ? 'SUCCESS' : 'FAILED'));
         } catch (\Throwable $emailError) {
             error_log('Order status update email failed for order ' . $orderId . ': ' . $emailError->getMessage());
         }
