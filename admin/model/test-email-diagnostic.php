@@ -225,6 +225,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
     }
 }
 
+// ===================== RAW FUNCTION TEST =====================
+// Sends the EXACT bare-bones content that already worked in the manual
+// "Run SMTP Send Test" above, but routed through the real production
+// sendEmailWithFallback()/sendEmail() function instead of a hand-built
+// mailer. The only variables this changes vs. the working test are what
+// sendEmail() adds automatically: Reply-To (concierge@vangence.com) and
+// the X-Mailer custom header. If THIS fails where the manual test
+// succeeded, the Reply-To/header — not the HTML content — is the cause.
+$rawSendResult = null;
+$rawSendError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'] === 'raw') {
+    try {
+        $rawSendResult = sendEmailWithFallback(
+                $testRecipient,
+                'Vangence Diagnostic',
+                'Vangence SMTP Test (via function) — ' . date('Y-m-d H:i:s'),
+                '<p>If you received this, SMTP is working for Vangence order emails.</p>'
+        );
+    } catch (Throwable $e) {
+        $rawSendResult = false;
+        $rawSendError = $e->getMessage();
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -328,6 +353,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
         <p class="fail">Lite test email failed to send.</p>
         <?php if ($liteSendError !== ''): ?>
             <p><strong>Error:</strong> <?= htmlspecialchars($liteSendError) ?></p>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
+
+<div class="card">
+    <h2>A/B Test: Raw content via real function</h2>
+    <p>
+        Sends the EXACT same one-line content as the working "Run SMTP Send Test" above, but through the real
+        <code>sendEmailWithFallback()</code> function instead of a hand-built mailer. The only difference vs. the
+        working test is what that function adds automatically: a Reply-To header (<code><?= htmlspecialchars(getSupportEmail($env)) ?></code>)
+        and an <code>X-Mailer: Vangence-Orders</code> header. If this fails where the manual test succeeded, that
+        pinpoints the Reply-To or custom header as the actual cause — not the HTML content.
+    </p>
+    <p>
+        <a class="btn" href="?key=<?= urlencode($requiredKey) ?>&amp;send=raw&amp;to=<?= urlencode($testRecipient) ?>">Send Raw Function Test</a>
+    </p>
+
+    <?php if ($rawSendResult === true): ?>
+        <p class="ok">Raw function test email sent successfully. Check inbox and spam folder.</p>
+    <?php elseif ($rawSendResult === false): ?>
+        <p class="fail">Raw function test email failed to send.</p>
+        <?php if ($rawSendError !== ''): ?>
+            <p><strong>Error:</strong> <?= htmlspecialchars($rawSendError) ?></p>
         <?php endif; ?>
     <?php endif; ?>
 </div>
