@@ -188,6 +188,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
     }
 }
 
+// ===================== LITE TEMPLATE A/B TEST =====================
+// A deliberately plain-looking version of the order confirmation: no
+// logo banner, no colored button (a plain text link instead), minimal
+// inline styling, no big monetary "PKR" total. Tests whether the
+// *design pattern* (marketing-style banner + CTA button) is what's
+// tripping the relay's content filter, independent of the SMTP path.
+$liteSendResult = null;
+$liteSendError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'] === 'lite') {
+    $orderNumber = 'ORD_DIAGTEST' . time();
+    $trackingUrl = getOrderConfirmationUrl($orderNumber, $env);
+    $supportEmail = getSupportEmail($env);
+
+    $liteBody = "
+        <div style=\"font-family:Arial,sans-serif;font-size:14px;color:#222;max-width:600px;\">
+            <p>Hi Diagnostic,</p>
+            <p>Thank you for your order. Your order number is {$orderNumber}.</p>
+            <p>Order status: pending. Total: PKR 3450.</p>
+            <p>You can check your order status here: <a href=\"" . htmlspecialchars($trackingUrl) . "\">" . htmlspecialchars($trackingUrl) . "</a></p>
+            <p>Questions? Contact {$supportEmail}.</p>
+            <p>— Vangence</p>
+        </div>";
+
+    try {
+        $liteSendResult = sendEmailWithFallback(
+                $testRecipient,
+                'Diagnostic Test',
+                'Order Confirmed — ' . $orderNumber . ' | Vangence',
+                $liteBody
+        );
+    } catch (Throwable $e) {
+        $liteSendResult = false;
+        $liteSendError = $e->getMessage();
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -271,6 +308,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
             <p><strong>Error:</strong> <?= htmlspecialchars($templateSendError) ?></p>
         <?php endif; ?>
         <p style="font-size:12px;color:#888;">Check your PHP error log for the "sendEmail ERROR" / SMTP trace line for full detail.</p>
+    <?php endif; ?>
+</div>
+
+<div class="card">
+    <h2>A/B Test: Lite Template (no banner, no button)</h2>
+    <p>
+        Same code path again, but with a plain-text-style body: no logo banner, no colored button, minimal styling
+        — just a link. If this arrives while the full template doesn't, the fix is redesigning the template to look
+        less like a marketing email while keeping it recognizably Vangence.
+    </p>
+    <p>
+        <a class="btn" href="?key=<?= urlencode($requiredKey) ?>&amp;send=lite&amp;to=<?= urlencode($testRecipient) ?>">Send Lite Template Test</a>
+    </p>
+
+    <?php if ($liteSendResult === true): ?>
+        <p class="ok">Lite test email sent successfully. Check inbox and spam folder.</p>
+    <?php elseif ($liteSendResult === false): ?>
+        <p class="fail">Lite test email failed to send.</p>
+        <?php if ($liteSendError !== ''): ?>
+            <p><strong>Error:</strong> <?= htmlspecialchars($liteSendError) ?></p>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 </body>
