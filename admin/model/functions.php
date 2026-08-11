@@ -664,8 +664,17 @@ function sendEmail($to, $toName, $subject, $htmlBody, $replyToEmail = null, $rep
         return false;
     }
 
+    $debugOutput = '';
+
     try {
         $mail = createConfiguredMailer($env);
+        // Capture the full SMTP conversation (not just the final error) so
+        // real failures on live order/status emails can be diagnosed from
+        // the error log the same way the diagnostic tool's "send test" does.
+        $mail->SMTPDebug = 2;
+        $mail->Debugoutput = static function ($str) use (&$debugOutput) {
+            $debugOutput .= $str;
+        };
         $mail->addAddress($to, $toName);
         $mail->addReplyTo($replyToEmail ?: getSupportEmail($env), $replyToName ?: 'Vangence Support');
         $mail->isHTML(true);
@@ -679,9 +688,9 @@ function sendEmail($to, $toName, $subject, $htmlBody, $replyToEmail = null, $rep
         return true;
     } catch (\Throwable $e) {
         $detail = ($e instanceof \PHPMailer\PHPMailer\Exception && isset($mail))
-            ? $mail->ErrorInfo
-            : $e->getMessage();
-        error_log('sendEmail ERROR for ' . $to . ': ' . $detail);
+                ? $mail->ErrorInfo
+                : $e->getMessage();
+        error_log('sendEmail ERROR for ' . $to . ': ' . $detail . ' | SMTP trace: ' . trim($debugOutput));
         return false;
     }
 }
@@ -697,8 +706,8 @@ function sendEmailWithFallback($to, $toName, $subject, $htmlBody, $replyToEmail 
     $currentEncryption = strtolower(trim($env['MAIL_ENCRYPTION'] ?? ($currentPort === 587 ? 'tls' : 'ssl')));
 
     $fallbackProfiles = [
-        ['port' => 587, 'encryption' => 'tls'],
-        ['port' => 465, 'encryption' => 'ssl'],
+            ['port' => 587, 'encryption' => 'tls'],
+            ['port' => 465, 'encryption' => 'ssl'],
     ];
 
     foreach ($fallbackProfiles as $profile) {
@@ -710,8 +719,14 @@ function sendEmailWithFallback($to, $toName, $subject, $htmlBody, $replyToEmail 
         $fallbackEnv['MAIL_PORT'] = (string) $profile['port'];
         $fallbackEnv['MAIL_ENCRYPTION'] = $profile['encryption'];
 
+        $debugOutput = '';
+
         try {
             $mail = createConfiguredMailer($fallbackEnv);
+            $mail->SMTPDebug = 2;
+            $mail->Debugoutput = static function ($str) use (&$debugOutput) {
+                $debugOutput .= $str;
+            };
             $mail->addAddress($to, $toName);
             $mail->addReplyTo($replyToEmail ?: getSupportEmail($env), $replyToName ?: 'Vangence Support');
             $mail->isHTML(true);
@@ -725,9 +740,9 @@ function sendEmailWithFallback($to, $toName, $subject, $htmlBody, $replyToEmail 
             return true;
         } catch (\Throwable $e) {
             $detail = ($e instanceof \PHPMailer\PHPMailer\Exception && isset($mail))
-                ? $mail->ErrorInfo
-                : $e->getMessage();
-            error_log('sendEmail fallback ERROR (' . $profile['port'] . '/' . $profile['encryption'] . ') for ' . $to . ': ' . $detail);
+                    ? $mail->ErrorInfo
+                    : $e->getMessage();
+            error_log('sendEmail fallback ERROR (' . $profile['port'] . '/' . $profile['encryption'] . ') for ' . $to . ': ' . $detail . ' | SMTP trace: ' . trim($debugOutput));
         }
     }
 
@@ -805,10 +820,10 @@ function sendAdminNewOrderNotificationEmail($conn, $orderId)
         </p>";
 
     return sendEmailWithFallback(
-        $adminEmail,
-        'Vangence Admin',
-        'New Order: ' . $o['order_number'] . ' — PKR ' . number_format((float) $o['total_amount'], 2),
-        getEmailWrapper($inner, $env)
+            $adminEmail,
+            'Vangence Admin',
+            'New Order: ' . $o['order_number'] . ' — PKR ' . number_format((float) $o['total_amount'], 2),
+            getEmailWrapper($inner, $env)
     );
 }
 
@@ -845,10 +860,10 @@ function sendOrderConfirmationEmail($conn, $orderId)
         </p>";
 
     $customerSent = sendEmailWithFallback(
-        $o['email'],
-        $o['first_name'] . ' ' . $o['last_name'],
-        'Order Confirmed — ' . $o['order_number'] . ' | Vangence',
-        getEmailWrapper($inner, $env)
+            $o['email'],
+            $o['first_name'] . ' ' . $o['last_name'],
+            'Order Confirmed — ' . $o['order_number'] . ' | Vangence',
+            getEmailWrapper($inner, $env)
     );
 
     $adminSent = sendAdminNewOrderNotificationEmail($conn, $orderId);
@@ -871,11 +886,11 @@ function sendOrderStatusUpdateEmail($conn, $orderId)
     $supportEmail = getSupportEmail($env);
 
     $statusMessages = [
-        'pending'    => 'Your order is awaiting confirmation. We will notify you as soon as it moves to processing.',
-        'processing' => 'Great news — your order is now being prepared in our atelier and will ship soon.',
-        'shipped'    => 'Your order is on its way. You will receive delivery updates from our courier partner shortly.',
-        'delivered'  => 'Your order has been delivered. We hope you enjoy your Vangence pieces. Thank you for shopping with us.',
-        'cancelled'  => 'Your order has been cancelled. If this was unexpected or you need help placing a new order, please contact us.',
+            'pending'    => 'Your order is awaiting confirmation. We will notify you as soon as it moves to processing.',
+            'processing' => 'Great news — your order is now being prepared in our atelier and will ship soon.',
+            'shipped'    => 'Your order is on its way. You will receive delivery updates from our courier partner shortly.',
+            'delivered'  => 'Your order has been delivered. We hope you enjoy your Vangence pieces. Thank you for shopping with us.',
+            'cancelled'  => 'Your order has been cancelled. If this was unexpected or you need help placing a new order, please contact us.',
     ];
 
     $statusMessage = $statusMessages[$o['order_status']] ?? 'Your order status has been updated.';
@@ -903,10 +918,10 @@ function sendOrderStatusUpdateEmail($conn, $orderId)
         </p>";
 
     return sendEmailWithFallback(
-        $o['email'],
-        $o['first_name'] . ' ' . $o['last_name'],
-        'Order Update — ' . $statusLabel . ' | ' . $o['order_number'],
-        getEmailWrapper($inner, $env)
+            $o['email'],
+            $o['first_name'] . ' ' . $o['last_name'],
+            'Order Update — ' . $statusLabel . ' | ' . $o['order_number'],
+            getEmailWrapper($inner, $env)
     );
 }
 ?>
