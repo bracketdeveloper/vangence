@@ -30,14 +30,14 @@ function diagLine(string $label, string $value, bool $ok = true): string
     $color = $ok ? '#1e7e34' : '#c0392b';
     $status = $ok ? 'OK' : 'FAIL';
     return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">'
-        . htmlspecialchars($label)
-        . '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">'
-        . htmlspecialchars($value)
-        . '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:'
-        . $color
-        . ';font-weight:bold;">'
-        . $status
-        . '</td></tr>';
+            . htmlspecialchars($label)
+            . '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">'
+            . htmlspecialchars($value)
+            . '</td><td style="padding:8px 12px;border-bottom:1px solid #eee;color:'
+            . $color
+            . ';font-weight:bold;">'
+            . $status
+            . '</td></tr>';
 }
 
 $env = getMailEnv();
@@ -63,18 +63,18 @@ $attemptLog = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'] === '1') {
     $profiles = [
-        [
-            'label' => 'Primary (.env settings)',
-            'env' => $env,
-        ],
-        [
-            'label' => 'Fallback TLS :587',
-            'env' => array_merge($env, ['MAIL_PORT' => '587', 'MAIL_ENCRYPTION' => 'tls']),
-        ],
-        [
-            'label' => 'Fallback SSL :465',
-            'env' => array_merge($env, ['MAIL_PORT' => '465', 'MAIL_ENCRYPTION' => 'ssl']),
-        ],
+            [
+                    'label' => 'Primary (.env settings)',
+                    'env' => $env,
+            ],
+            [
+                    'label' => 'Fallback TLS :587',
+                    'env' => array_merge($env, ['MAIL_PORT' => '587', 'MAIL_ENCRYPTION' => 'tls']),
+            ],
+            [
+                    'label' => 'Fallback SSL :465',
+                    'env' => array_merge($env, ['MAIL_PORT' => '465', 'MAIL_ENCRYPTION' => 'ssl']),
+            ],
     ];
 
     $seen = [];
@@ -100,19 +100,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
 
             $sendResult = true;
             $attemptLog[] = [
-                'label' => $profile['label'],
-                'ok' => true,
-                'detail' => trim($debugOutput),
+                    'label' => $profile['label'],
+                    'ok' => true,
+                    'detail' => trim($debugOutput),
             ];
             break;
         } catch (Throwable $e) {
             $detail = ($e instanceof \PHPMailer\PHPMailer\Exception && isset($mail))
-                ? $mail->ErrorInfo
-                : $e->getMessage();
+                    ? $mail->ErrorInfo
+                    : $e->getMessage();
             $attemptLog[] = [
-                'label' => $profile['label'],
-                'ok' => false,
-                'detail' => trim($debugOutput . "\n" . $detail),
+                    'label' => $profile['label'],
+                    'ok' => false,
+                    'detail' => trim($debugOutput . "\n" . $detail),
             ];
             $sendError = $detail;
         }
@@ -120,6 +120,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
 
     if ($sendResult !== true) {
         $sendResult = false;
+    }
+}
+
+// ===================== TEMPLATE A/B TEST =====================
+// Sends the REAL order-confirmation HTML (header, footer, items table,
+// tracking button) through the SAME sendEmailWithFallback() function
+// production order/status emails use — with dummy data, no DB writes.
+// This isolates whether the plain test message and the real template
+// are treated differently by something downstream (spam filter, content
+// scanner) even though both use the identical SMTP account and code path.
+$templateSendResult = null;
+$templateSendError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'] === 'template') {
+    $dummyOrder = [
+            'order_number'   => 'ORD_DIAGTEST' . time(),
+            'created_at'     => date('Y-m-d H:i:s'),
+            'payment_method' => 'cod',
+            'order_status'   => 'pending',
+            'subtotal'       => 3200.00,
+            'shipping_cost'  => 250.00,
+            'total_amount'   => 3450.00,
+            'first_name'     => 'Diagnostic',
+            'last_name'      => 'Test',
+            'address'        => '123 Test Street',
+            'city'           => 'Lahore',
+            'state'          => 'Punjab',
+            'phone'          => '0300-0000000',
+            'email'          => $testRecipient,
+    ];
+    $dummyItems = [
+            [
+                    'product_name' => 'Sample Product',
+                    'size' => 'M',
+                    'color' => 'Black',
+                    'quantity' => 1,
+                    'line_total' => 3200.00,
+            ],
+    ];
+
+    try {
+        $summaryHtml = buildOrderEmailSummaryHtml($dummyOrder, $dummyItems, $env);
+        $trackingUrl = getOrderConfirmationUrl($dummyOrder['order_number'], $env);
+        $supportEmail = getSupportEmail($env);
+
+        $inner = "
+            <h2 style=\"color:#1a2b49; font-size:18px; margin-top:0;\">Thank you for your order, " . htmlspecialchars($dummyOrder['first_name']) . "!</h2>
+            <p style=\"color:#555; font-size:14px; line-height:1.7;\">
+                This is the diagnostic tool sending the REAL production order-confirmation template (dummy data, no database writes) to isolate template-vs-content delivery issues.
+            </p>
+            {$summaryHtml}
+            " . getEmailButtonHtml($trackingUrl, 'View Your Order') . "
+            <p style=\"font-size:13px; color:#777; line-height:1.6;\">
+                Need assistance? Email us at <a href=\"mailto:{$supportEmail}\" style=\"color:#1a2b49;\">{$supportEmail}</a>.
+            </p>";
+
+        $templateSendResult = sendEmailWithFallback(
+                $testRecipient,
+                $dummyOrder['first_name'] . ' ' . $dummyOrder['last_name'],
+                'Order Confirmed — ' . $dummyOrder['order_number'] . ' | Vangence',
+                getEmailWrapper($inner, $env)
+        );
+    } catch (Throwable $e) {
+        $templateSendResult = false;
+        $templateSendError = $e->getMessage();
     }
 }
 
@@ -184,6 +249,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['send']) && $_GET['send'
             <pre><?= htmlspecialchars($attempt['detail']) ?></pre>
         <?php endif; ?>
     <?php endforeach; ?>
+</div>
+
+<div class="card">
+    <h2>A/B Test: Real Order Template</h2>
+    <p>
+        This sends the exact same branded HTML used for real order confirmations (header, footer, items table,
+        tracking button) through the exact same <code>sendEmailWithFallback()</code> function production orders use —
+        with dummy data, no database writes. If the plain test above arrives but this one doesn't, the template's
+        content (not your SMTP config) is what's getting filtered downstream.
+    </p>
+    <p>
+        <a class="btn" href="?key=<?= urlencode($requiredKey) ?>&amp;send=template&amp;to=<?= urlencode($testRecipient) ?>">Send Real Template Test</a>
+    </p>
+
+    <?php if ($templateSendResult === true): ?>
+        <p class="ok">Template test email sent successfully. Check inbox and spam folder — and compare against the plain test above.</p>
+    <?php elseif ($templateSendResult === false): ?>
+        <p class="fail">Template test email failed to send.</p>
+        <?php if ($templateSendError !== ''): ?>
+            <p><strong>Error:</strong> <?= htmlspecialchars($templateSendError) ?></p>
+        <?php endif; ?>
+        <p style="font-size:12px;color:#888;">Check your PHP error log for the "sendEmail ERROR" / SMTP trace line for full detail.</p>
+    <?php endif; ?>
 </div>
 </body>
 </html>
