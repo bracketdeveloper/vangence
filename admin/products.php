@@ -39,11 +39,11 @@ $allProducts = getAllProductsforAdmin($conn);
                                        cellspacing="0">
                                     <thead>
                                     <tr>
+                                        <th>Category</th>
                                         <th>Product Id</th>
                                         <th>Product Name</th>
                                         <th>Colour</th>
                                         <th>Qty</th>
-                                        <th>Category</th>
                                         <th>Price</th>
                                         <th>Product Image</th>
                                         <th>Live on Web</th>
@@ -62,11 +62,15 @@ $allProducts = getAllProductsforAdmin($conn);
                                         $firstImage = !empty($images) ? $images[0] : 'no-image.png';
                                         ?>
                                         <tr>
+                                            <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?>
                                             <td><?php echo htmlspecialchars($product['product_id']); ?></td>
                                             <td><?php echo htmlspecialchars($product['product_name']); ?></td>
-                                            <td><?php echo htmlspecialchars($product['colors']); ?></td>
+                                            <td><?php
+                                                $colors = json_decode($product['colors'], true);
+                                                echo htmlspecialchars(is_array($colors) ? implode(', ', $colors) : $product['colors']);
+                                                ?></td>
                                             <td><?php echo htmlspecialchars($product['qty']); ?></td>
-                                            <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
+                                            </td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
                                             <td><img src="uploads/<?php echo htmlspecialchars($firstImage); ?>"
                                                      alt="Product Image"
                                                      style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
