@@ -41,7 +41,10 @@ $allProducts = getAllProductsforAdmin($conn);
                                     <tr>
                                         <th>Product Id</th>
                                         <th>Product Name</th>
-                                        <th>Category</th> <th>Price</th>
+                                        <th>Colour</th>
+                                        <th>Qty</th>
+                                        <th>Category</th>
+                                        <th>Price</th>
                                         <th>Product Image</th>
                                         <th>Live on Web</th>
                                         <th>Print Barcode</th>
@@ -61,6 +64,8 @@ $allProducts = getAllProductsforAdmin($conn);
                                         <tr>
                                             <td><?php echo htmlspecialchars($product['product_id']); ?></td>
                                             <td><?php echo htmlspecialchars($product['product_name']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['colors']); ?></td>
+                                            <td><?php echo htmlspecialchars($product['qty']); ?></td>
                                             <td><?php echo htmlspecialchars($product['category_name'] ?? 'N/A'); ?></td> <td><?php echo htmlspecialchars($product['selling_price']); ?></td>
                                             <td><img src="uploads/<?php echo htmlspecialchars($firstImage); ?>"
                                                      alt="Product Image"
