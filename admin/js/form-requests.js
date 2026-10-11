@@ -1230,7 +1230,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: bold;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -1247,45 +1247,46 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: bold;
     line-height: 1.05;
     overflow-wrap: anywhere;
     overflow: hidden;
 }
 
-.color {
+.detailsTable {
     position: absolute;
     top: 33px;
     left: 2px;
     right: 2px;
-    height: 11px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    font-size: 8px;
-    font-weight: bold;
+}
+
+.detailsTable table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.5px;
     line-height: 1;
+}
+
+.detailsTable td {
+    padding: 1px 2px;
     white-space: nowrap;
     overflow: hidden;
 }
 
-.price {
-    position: absolute;
-    top: 45px;
-    left: 2px;
-    right: 2px;
-    height: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-size: 8px;
+.detailsTable td.label-col {
+    text-align: right;
     font-weight: bold;
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
+    width: 38%;
+}
+
+.detailsTable td.val-col {
+    text-align: left;
+    width: 62%;
 }
 
 .barcodeBox {
@@ -1333,18 +1334,12 @@ body {
         '</div>'
     );
 
-    // Color underneath the product name
+    // Color and Price in a table to align colons
     win.document.write(
-        '<div class="color"> Color: ' +
-        escapeHtml(color) +
-        '</div>'
-    );
-
-    // Price underneath the color
-    win.document.write(
-        '<div class="price">Price: ' +
-        escapeHtml(price) +
-        ' PKR</div>'
+        '<div class="detailsTable"><table>' +
+        '<tr><td class="label-col">Color :</td><td class="val-col">' + escapeHtml(color) + '</td></tr>' +
+        '<tr><td class="label-col">Price :</td><td class="val-col">' + escapeHtml(price) + ' PKR</td></tr>' +
+        '</table></div>'
     );
 
     // Barcode box
