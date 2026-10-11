@@ -44,7 +44,7 @@ $allProducts = getAllProductsforAdmin($conn);
                                         <th>Product Name</th>
                                         <th>Colour</th>
                                         <th>Qty</th>
-                                        <th>Price</th>
+                                        <th>Unit Price</th>
                                         <th>Product Image</th>
                                         <th>Live on Web</th>
                                         <th>Print Barcode</th>
