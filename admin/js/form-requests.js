@@ -1266,7 +1266,7 @@ body {
 }
 
 .detailsTable table {
-    width: 100%;
+    margin: 0 auto;
     border-collapse: collapse;
     font-size: 7.5px;
     line-height: 1;
@@ -1281,12 +1281,11 @@ body {
 .detailsTable td.label-col {
     text-align: right;
     font-weight: bold;
-    width: 38%;
+    padding-right: 4px;
 }
 
 .detailsTable td.val-col {
     text-align: left;
-    width: 62%;
 }
 
 .barcodeBox {
@@ -1334,7 +1333,7 @@ body {
         '</div>'
     );
 
-    // Color and Price in a table to align colons
+    // Centered Color and Price table with aligned colons
     win.document.write(
         '<div class="detailsTable"><table>' +
         '<tr><td class="label-col">Color :</td><td class="val-col">' + escapeHtml(color) + '</td></tr>' +
