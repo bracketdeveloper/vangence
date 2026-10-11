@@ -1247,7 +1247,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
