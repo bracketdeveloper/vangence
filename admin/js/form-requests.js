@@ -1166,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', function () {
     calculateFinalBillEdit();
 });
 
-function printBarcode(barcode, name, price) {
+function printBarcode(barcode, name, color, price) {
     var win = window.open('', '_blank', 'width=600,height=800');
 
     if (!win) {
@@ -1206,7 +1206,7 @@ body {
     width: 2in;
     height: 1in;
     position: relative;
-    padding: 3px;
+    padding: 2px 3px;
     overflow: hidden;
 }
 
@@ -1215,29 +1215,47 @@ body {
     top: 2px;
     left: 4px;
     right: 4px;
-    height: 30%;
+    height: 24%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 16px;
+    font-size: 11px;
     font-weight: bold;
     line-height: 1.1;
     overflow-wrap: anywhere;
     overflow: hidden;
 }
 
-.price {
+.color {
     position: absolute;
-    top: 32%;
+    top: 28%;
     left: 4px;
     right: 4px;
-    height: 12%;
+    height: 14%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 8px;
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.price {
+    position: absolute;
+    top: 44%;
+    left: 4px;
+    right: 4px;
+    height: 14%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 9px;
+    font-weight: bold;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -1247,8 +1265,8 @@ body {
     position: absolute;
     left: 3px;
     right: 3px;
-    bottom: 12px;
-    height: 43px;
+    bottom: 11px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1257,41 +1275,48 @@ body {
 .barcodeBox svg {
     display: block;
     width: 100%;
-    height: 43px;
+    height: 32px;
 }
-
 
 .barcodeNum {
     position: absolute;
-    bottom: 2px;
+    bottom: 1px;
     left: 3px;
     right: 3px;
     text-align: center;
-    font-size: 8px;
-    line-height: 9px;
+    font-size: 7.5px;
+    line-height: 8px;
     white-space: nowrap;
     overflow: hidden;
 }
 `);
-
+    color = JSON.parse(color);
+    color = color.map(c => c.slice(0, -2) + c.slice(-1) + c.slice(-2, -1));
     win.document.write('</style></head><body>');
     win.document.write('<div class="label">');
 
-    // Large, centered product name
+    // Product name
     win.document.write(
         '<div class="productName">' +
         escapeHtml(name) +
         '</div>'
     );
 
-    // Small price underneath the product name
+    // Color underneath the product name
     win.document.write(
-        '<div class="price">' +
+        '<div class="color">' +
+        escapeHtml(color) +
+        '</div>'
+    );
+
+    // Price underneath the color
+    win.document.write(
+        '<div class="price">Price: ' +
         escapeHtml(price) +
         ' PKR</div>'
     );
 
-    // Barcode stretches across the full bottom section
+    // Barcode box
     win.document.write(
         '<div class="barcodeBox"><svg id="barcode"></svg></div>'
     );
@@ -1316,10 +1341,10 @@ body {
 window.onload = function () {
     JsBarcode("#barcode", ${JSON.stringify(String(barcode))}, {
         format: "CODE128",
-            displayValue: false,
-            margin: 5,
-            width: 1.5,
-            height: 43
+        displayValue: false,
+        margin: 2,
+        width: 1.4,
+        height: 32
     });
 
     setTimeout(function () {

@@ -79,6 +79,7 @@ $allProducts = getAllProductsforAdmin($conn);
                                             <td><button class="btn btn-dark" onclick="printBarcode(
                                                         '<?php echo $product['barcode']; ?>',
                                                         '<?php echo htmlspecialchars($product['product_name']); ?>',
+                                                        '<?php echo htmlspecialchars($product['colors']); ?>',
                                                         '<?php echo $product['selling_price']; ?>'
                                                         )">Print</button></td>
                                             <?php if ($_SESSION['role'] == 'admin'): ?>
