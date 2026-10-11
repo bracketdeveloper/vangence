@@ -1216,55 +1216,55 @@ body {
     width: 2in;
     height: 1in;
     position: relative;
-    padding: 2px 3px;
+    padding: 1px 3px;
     overflow: hidden;
 }
 
 .companyName {
     position: absolute;
-    top: 2px;
-    left: 4px;
-    right: 4px;
-    height: 18%;
+    top: 1px;
+    left: 2px;
+    right: 2px;
+    height: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: bold;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
     overflow: hidden;
 }
 
 .productName {
     position: absolute;
-    top: 21px;
-    left: 4px;
-    right: 4px;
-    height: 22%;
+    top: 14px;
+    left: 2px;
+    right: 2px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: bold;
-    line-height: 1.1;
+    line-height: 1.05;
     overflow-wrap: anywhere;
     overflow: hidden;
 }
 
 .color {
     position: absolute;
-    top: 40%;
-    left: 4px;
-    right: 4px;
-    height: 12%;
+    top: 33px;
+    left: 2px;
+    right: 2px;
+    height: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 8px;
+    font-size: 7.5px;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -1272,15 +1272,15 @@ body {
 
 .price {
     position: absolute;
-    top: 53%;
-    left: 4px;
-    right: 4px;
-    height: 13%;
+    top: 45px;
+    left: 2px;
+    right: 2px;
+    height: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 8.5px;
+    font-size: 8px;
     font-weight: bold;
     line-height: 1;
     white-space: nowrap;
@@ -1289,10 +1289,10 @@ body {
 
 .barcodeBox {
     position: absolute;
-    left: 3px;
-    right: 3px;
-    bottom: 11px;
-    height: 15px;
+    left: 2px;
+    right: 2px;
+    bottom: 9px;
+    height: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1301,16 +1301,16 @@ body {
 .barcodeBox svg {
     display: block;
     width: 100%;
-    height: 30px;
+    height: 25px;
 }
 
 .barcodeNum {
     position: absolute;
     bottom: 1px;
-    left: 3px;
-    right: 3px;
+    left: 2px;
+    right: 2px;
     text-align: center;
-    font-size: 7.5px;
+    font-size: 7px;
     line-height: 8px;
     white-space: nowrap;
     overflow: hidden;
@@ -1372,9 +1372,9 @@ window.onload = function () {
     JsBarcode("#barcode", ${JSON.stringify(String(barcode))}, {
         format: "CODE128",
         displayValue: false,
-        margin: 2,
-        width: 1.4,
-        height: 30
+        margin: 1,
+        width: 1.3,
+        height: 25
     });
 
     setTimeout(function () {
