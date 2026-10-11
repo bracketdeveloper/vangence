@@ -1230,7 +1230,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: bold;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -1247,7 +1247,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: bold;
     line-height: 1.05;
     overflow-wrap: anywhere;
@@ -1264,7 +1264,8 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 7.5px;
+    font-size: 8px;
+    font-weight: bold;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -1334,7 +1335,7 @@ body {
 
     // Color underneath the product name
     win.document.write(
-        '<div class="color">' +
+        '<div class="color"> Color: ' +
         escapeHtml(color) +
         '</div>'
     );
