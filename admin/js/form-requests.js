@@ -1183,6 +1183,16 @@ function printBarcode(barcode, name, color, price) {
             .replace(/'/g, '&#039;');
     }
 
+    // Clean up color string if it's coming in as a JSON array (e.g. '["Bitter Chocolate"]')
+    try {
+        var parsedColor = JSON.parse(color);
+        if (Array.isArray(parsedColor)) {
+            color = parsedColor[0];
+        }
+    } catch (e) {
+        // If it's already a plain string, leave it as is
+    }
+
     win.document.write('<html><head><title>Label</title>');
     win.document.write('<style>');
 
