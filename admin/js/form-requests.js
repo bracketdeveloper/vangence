@@ -1337,7 +1337,7 @@ body {
     // Centered Color and Price table with aligned colons
     win.document.write(
         '<div class="detailsTable"><table>' +
-        '<tr><td class="label-col">Color :</td><td class="val-col">' + escapeHtml(color) + '</td></tr>' +
+        '<tr><td class="label-col">Colour :</td><td class="val-col">' + escapeHtml(color) + '</td></tr>' +
         '<tr><td class="label-col">Price :</td><td class="val-col">' + escapeHtml(price) + ' PKR</td></tr>' +
         '</table></div>'
     );
