@@ -67,100 +67,80 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete_category') {
         echo "An error occurred while deleting category.";
     }
 }
-if (isset($_GET['action']) && $_GET['action'] == 'add_new_product') {
+if (isset($_GET['action']) &&$_GET['action'] == 'add_new_product') {
     ob_clean();
     $prefix = "PROD";
-    $productId = $prefix . '_' . time();
+    $productId =$prefix . '_' . time();
 
-    $productName = mysqli_real_escape_string($conn, $_POST['product_name']);
-    $description = mysqli_real_escape_string($conn, $_POST['description']);
-    $details     = mysqli_real_escape_string($conn, $_POST['details']);
-    $sellingPrice = mysqli_real_escape_string($conn, $_POST['selling_price']);
-    $qty          = mysqli_real_escape_string($conn, $_POST['qty']);
-    $categoryId   = mysqli_real_escape_string($conn, $_POST['category_id']);
+    $productName = mysqli_real_escape_string($conn, $_POST['product_name']);$description = mysqli_real_escape_string($conn,$_POST['description']);
+    $details     = mysqli_real_escape_string($conn, $_POST['details']);$sellingPrice = mysqli_real_escape_string($conn,$_POST['selling_price']);
+    $qty          = mysqli_real_escape_string($conn, $_POST['qty']);$categoryId   = mysqli_real_escape_string($conn,$_POST['category_id']);
 
-    $sizesArray  = explode(',', $_POST['sizes']);
-    $colorsArray = explode(',', $_POST['colors']);
-    $sizesJson   = json_encode(array_map('trim', $sizesArray));
-    $colorsJson  = json_encode(array_map('trim', $colorsArray));
+    $sizesArray  = explode(',',$_POST['sizes']);
+    $colorsArray = explode(',',$_POST['colors']);
+    $sizesJson   = json_encode(array_map('trim',$sizesArray));
+    $colorsJson  = json_encode(array_map('trim',$colorsArray));
 
     $productBarcode = generateProductBarcode();
 
-    $checkExistingProduct = "SELECT * FROM `products` WHERE `product_name` = '$productName' OR `barcode` = '$productBarcode'";
-    $checkExistingProductResult = mysqli_query($conn, $checkExistingProduct);
-
-    if (mysqli_num_rows($checkExistingProductResult) > 0) {
-        echo "Product with same name already exists.";
-    } else {
-        $imageNames = [];
-        $uploadDir = "../uploads/";
-        if (!empty($_FILES['images']['name'][0])) {
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
-                $fileName = $productId . '_' . basename($_FILES['images']['name'][$key]);
-                $targetPath = $uploadDir . $fileName;
-                if (move_uploaded_file($tmpName, $targetPath)) {
-                    $imageNames[] = $fileName;
-                }
+    $imageNames = [];$uploadDir = "../uploads/";
+    if (!empty($_FILES['images']['name'][0])) {
+        foreach ($_FILES['images']['tmp_name'] as$key => $tmpName) {$fileName = $productId . '_' . basename($_FILES['images']['name'][$key]);$targetPath = $uploadDir .$fileName;
+            if (move_uploaded_file($tmpName,$targetPath)) {
+                $imageNames[] =$fileName;
             }
-        }
-        $imageJson = json_encode($imageNames);
-
-        $newProductInsertQuery = "INSERT INTO `products` 
-            (`product_id`, `product_name`, `description`, `details`, `selling_price`, `image`, `qty`, `barcode`, `category_id`, `sizes`, `colors`) 
-            VALUES 
-            ('$productId', '$productName', '$description', '$details', '$sellingPrice', '$imageJson', '$qty', '$productBarcode', '$categoryId', '$sizesJson', '$colorsJson')";
-
-        if ($conn->query($newProductInsertQuery) === TRUE) {
-            $productDetails = getAllProducts($conn);
-            $images = [];
-            foreach ($productDetails as $product) {
-                $decoded = json_decode($product['image'], true);
-                if (is_array($decoded)) {
-                    $images = array_merge($images, $decoded);
-                }
-            }
-            deleteUnusedProductImages("../uploads/", $images);
-            echo "Product has been added successfully.";
-            generateBarcodeImage($productBarcode);
-        } else {
-            echo "An error occurred while adding the product: " . $conn->error;
         }
     }
+    $imageJson = json_encode($imageNames);
+
+    $newProductInsertQuery = "INSERT INTO `products` 
+        (`product_id`, `product_name`, `description`, `details`, `selling_price`, `image`, `qty`, `barcode`, `category_id`, `sizes`, `colors`) 
+        VALUES 
+        ('$productId', '$productName', '$description', '$details', '$sellingPrice', '$imageJson', '$qty', '$productBarcode', '$categoryId', '$sizesJson', '$colorsJson')";
+
+    if ($conn->query($newProductInsertQuery) === TRUE) {$productDetails = getAllProducts($conn);$images = [];
+        foreach ($productDetails as$product) {
+            $decoded = json_decode($product['image'], true);
+            if (is_array($decoded)) {$images = array_merge($images,$decoded);
+            }
+        }
+        deleteUnusedProductImages("../uploads/", $images);
+        echo "Product has been added successfully.";
+        generateBarcodeImage($productBarcode);
+    } else {
+        echo "An error occurred while adding the product: " . $conn->error;
+    }
 }
-if (isset($_GET['action']) && $_GET['action'] == 'edit_product') {
+
+if (isset($_GET['action']) &&$_GET['action'] == 'edit_product') {
     ob_clean();
-    $productId = mysqli_real_escape_string($conn, $_POST['edit_product_id']);
-    $productName = mysqli_real_escape_string($conn, $_POST['edit_product_name']);
-    $description = mysqli_real_escape_string($conn, $_POST['edit_description']);
-    $details = mysqli_real_escape_string($conn, $_POST['edit_details']);
-    $sellingPrice = mysqli_real_escape_string($conn, $_POST['edit_selling_price']);
-    $qty = mysqli_real_escape_string($conn, $_POST['edit_qty']);
-    $categoryId = mysqli_real_escape_string($conn, $_POST['edit_category_id']);
+    $productId = mysqli_real_escape_string($conn,$_POST['edit_product_id']);
+    $productName = mysqli_real_escape_string($conn, $_POST['edit_product_name']);$description = mysqli_real_escape_string($conn,$_POST['edit_description']);
+    $details = mysqli_real_escape_string($conn, $_POST['edit_details']);$sellingPrice = mysqli_real_escape_string($conn,$_POST['edit_selling_price']);
+    $qty = mysqli_real_escape_string($conn, $_POST['edit_qty']);$categoryId = mysqli_real_escape_string($conn,$_POST['edit_category_id']);
 
-    $sizes = json_encode(array_map('trim', explode(',', $_POST['edit_sizes'])));
-    $colors = json_encode(array_map('trim', explode(',', $_POST['edit_colors'])));
+    $sizes = json_encode(array_map('trim', explode(',',$_POST['edit_sizes'])));
+    $colors = json_encode(array_map('trim', explode(',',$_POST['edit_colors'])));
 
-    $existingImagesJson = isset($_POST['existing_images']) ? $_POST['existing_images'] : '[]';
+    $existingImagesJson = isset($_POST['existing_images']) ?$_POST['existing_images'] : '[]';
     $existingImages = json_decode($existingImagesJson, true);
 
-    $existingProduct = getProductByName($conn, $productName);
+    $existingProduct = getProductByName($conn,$productName);
 
-    if (!empty($existingProduct) && $existingProduct[0]['product_id'] !== $productId) {
+    if (!empty($existingProduct) && $existingProduct[0]['product_id'] !==$productId) {
         echo "Product with same name already exists.";
     } else {
-        $imageNames = [];
-        $uploadDir = "../uploads/";
+        $imageNames = [];$uploadDir = "../uploads/";
         if (!empty($_FILES['images']['name'][0])) {
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
-                $fileName = time() . '_' . basename($_FILES['images']['name'][$key]);
-                $targetPath = $uploadDir . $fileName;
-                if (move_uploaded_file($tmpName, $targetPath)) {
-                    $imageNames[] = $fileName;
+            foreach ($_FILES['images']['tmp_name'] as $key =>$tmpName) {
+                $fileName = time() . '_' . basename($_FILES['images']['name'][$key]);$targetPath = $uploadDir .$fileName;
+                if (move_uploaded_file($tmpName,$targetPath)) {
+                    $imageNames[] =$fileName;
                 }
             }
         }
 
-        $finalImages = array_unique(array_merge($existingImages, $imageNames));
+        $finalImages = array_unique(array_merge($existingImages,$imageNames));
         $finalImageJson = json_encode(array_values($finalImages));
 
         $productUpdateQuery = "UPDATE `products` SET 
