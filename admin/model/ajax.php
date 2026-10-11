@@ -125,41 +125,35 @@ if (isset($_GET['action']) &&$_GET['action'] == 'edit_product') {
     $existingImagesJson = isset($_POST['existing_images']) ?$_POST['existing_images'] : '[]';
     $existingImages = json_decode($existingImagesJson, true);
 
-    $existingProduct = getProductByName($conn,$productName);
-
-    if (!empty($existingProduct) && $existingProduct[0]['product_id'] !==$productId) {
-        echo "Product with same name already exists.";
-    } else {
-        $imageNames = [];$uploadDir = "../uploads/";
-        if (!empty($_FILES['images']['name'][0])) {
-            foreach ($_FILES['images']['tmp_name'] as $key =>$tmpName) {
-                $fileName = time() . '_' . basename($_FILES['images']['name'][$key]);$targetPath = $uploadDir .$fileName;
-                if (move_uploaded_file($tmpName,$targetPath)) {
-                    $imageNames[] =$fileName;
-                }
+    $imageNames = [];$uploadDir = "../uploads/";
+    if (!empty($_FILES['images']['name'][0])) {
+        foreach ($_FILES['images']['tmp_name'] as $key =>$tmpName) {
+            $fileName = time() . '_' . basename($_FILES['images']['name'][$key]);$targetPath = $uploadDir .$fileName;
+            if (move_uploaded_file($tmpName,$targetPath)) {
+                $imageNames[] =$fileName;
             }
         }
+    }
 
-        $finalImages = array_unique(array_merge($existingImages,$imageNames));
-        $finalImageJson = json_encode(array_values($finalImages));
+    $finalImages = array_unique(array_merge($existingImages,$imageNames));
+    $finalImageJson = json_encode(array_values($finalImages));
 
-        $productUpdateQuery = "UPDATE `products` SET 
-                               `product_name` = '$productName', 
-                               `description` = '$description',
-                               `details` = '$details',
-                               `selling_price` = '$sellingPrice', 
-                               `qty` = '$qty', 
-                               `category_id` = '$categoryId', 
-                               `sizes` = '$sizes', 
-                               `colors` = '$colors', 
-                               `image` = '$finalImageJson' 
-                               WHERE `product_id` = '$productId'";
+    $productUpdateQuery = "UPDATE `products` SET 
+                           `product_name` = '$productName', 
+                           `description` = '$description',
+                           `details` = '$details',
+                           `selling_price` = '$sellingPrice', 
+                           `qty` = '$qty', 
+                           `category_id` = '$categoryId', 
+                           `sizes` = '$sizes', 
+                           `colors` = '$colors', 
+                           `image` = '$finalImageJson' 
+                           WHERE `product_id` = '$productId'";
 
-        if ($conn->query($productUpdateQuery) === TRUE) {
-            echo "Product has been edited successfully.";
-        } else {
-            echo "An error occurred while editing product.";
-        }
+    if ($conn->query($productUpdateQuery) === TRUE) {
+        echo "Product has been edited successfully.";
+    } else {
+        echo "An error occurred while editing product.";
     }
 }
 
