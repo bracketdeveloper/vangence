@@ -1237,8 +1237,7 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 11px;
-    font-weight: bold;
+    font-size: 8px;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -1290,8 +1289,7 @@ body {
     overflow: hidden;
 }
 `);
-    color = JSON.parse(color);
-    color = color.map(c => c.slice(0, -2) + c.slice(-1) + c.slice(-2, -1));
+
     win.document.write('</style></head><body>');
     win.document.write('<div class="label">');
 
