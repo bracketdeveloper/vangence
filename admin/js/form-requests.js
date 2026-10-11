@@ -1168,59 +1168,175 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function printBarcode(barcode, name, price) {
     var win = window.open('', '_blank', 'width=600,height=800');
+
+    if (!win) {
+        alert('Please allow pop-ups to print barcode labels.');
+        return;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     win.document.write('<html><head><title>Label</title>');
     win.document.write('<style>');
 
-    // Label page size: 2in x 1in, no margins
-    win.document.write('@page{size:2in 1in;margin:0;}');
-    win.document.write('*{box-sizing:border-box;}');
-    win.document.write('body{margin:0;padding:0;font-family:Arial,sans-serif;}');
+    win.document.write(`
+@page {
+    size: 2in 1in;
+    margin: 0;
+}
 
-    win.document.write('.label{width:2in;height:1in;display:flex;flex-direction:column;justify-content:space-between;padding:2px;}');
+* {
+    box-sizing: border-box;
+}
 
-    win.document.write('.barcodeBox{display:flex;justify-content:center;align-items:center;height:50%;}');
-    win.document.write('.barcodeBox svg{max-width:90%;max-height:100%;}');
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
 
-    win.document.write('.barcodeNum{text-align:center;font-size:11px;margin:0;white-space:nowrap;overflow:hidden;}');
+.label {
+    width: 2in;
+    height: 1in;
+    position: relative;
+    padding: 3px;
+    overflow: hidden;
+}
 
-    win.document.write('.bottomRow{display:flex;justify-content:space-between;align-items:center;font-size:9px;width:100%;overflow:hidden;padding:0 3px;}');
-    win.document.write('.leftText{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px;}');
-    win.document.write('.rightText{text-align:right;white-space:nowrap;flex-shrink:0;}');
+.productName {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    right: 4px;
+    height: 30%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+}
 
-    win.document.write('</style>');
-    win.document.write('</head><body>');
+.price {
+    position: absolute;
+    top: 32%;
+    left: 4px;
+    right: 4px;
+    height: 12%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 8px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+}
 
-    win.document.write('<div class="label">');
-    win.document.write('  <div class="barcodeBox"><svg id="barcode"></svg></div>');
-    win.document.write('  <div class="barcodeNum">' + barcode + '</div>');
-    win.document.write('  <div class="bottomRow">');
-    win.document.write('    <div class="leftText">' + name + '</div>');
-    win.document.write('    <div class="rightText">' + price + ' PKR</div>');
-    win.document.write('  </div>');
-    win.document.write('</div>');
+.barcodeBox {
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    bottom: 12px;
+    height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-    // JsBarcode — inline generation, no SVG file needed
-    win.document.write('<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>');
-    win.document.write('<script>');
-    win.document.write('JsBarcode("#barcode","' + barcode + '",{format:"CODE128",displayValue:false,margin:0,width:1.2,height:40});');
-    win.document.write('<\/script>');
-
-    win.document.write('</body></html>');
-    win.document.close();
-
-    // Wait for full load (scripts + rendering) then print
-    win.onload = function () {
-        win.focus();
-        win.print();
-    };
-
-    // Close window after printing
-    win.onafterprint = function () {
-        win.close();
-    };
+.barcodeBox svg {
+    display: block;
+    width: 100%;
+    height: 43px;
 }
 
 
+.barcodeNum {
+    position: absolute;
+    bottom: 2px;
+    left: 3px;
+    right: 3px;
+    text-align: center;
+    font-size: 8px;
+    line-height: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+`);
+
+    win.document.write('</style></head><body>');
+    win.document.write('<div class="label">');
+
+    // Large, centered product name
+    win.document.write(
+        '<div class="productName">' +
+        escapeHtml(name) +
+        '</div>'
+    );
+
+    // Small price underneath the product name
+    win.document.write(
+        '<div class="price">' +
+        escapeHtml(price) +
+        ' PKR</div>'
+    );
+
+    // Barcode stretches across the full bottom section
+    win.document.write(
+        '<div class="barcodeBox"><svg id="barcode"></svg></div>'
+    );
+
+    // Barcode number below the bars
+    win.document.write(
+        '<div class="barcodeNum">' +
+        escapeHtml(barcode) +
+        '</div>'
+    );
+
+    win.document.write('</div>');
+
+    // Load JsBarcode
+    win.document.write(
+        '<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>'
+    );
+
+    win.document.write('<script>');
+
+    win.document.write(`
+window.onload = function () {
+    JsBarcode("#barcode", ${JSON.stringify(String(barcode))}, {
+        format: "CODE128",
+            displayValue: false,
+            margin: 5,
+            width: 1.5,
+            height: 43
+    });
+
+    setTimeout(function () {
+        window.focus();
+        window.print();
+    }, 300);
+};
+
+window.onafterprint = function () {
+    window.close();
+};
+`);
+
+    win.document.write('<\/script>');
+    win.document.write('</body></html>');
+    win.document.close();
+}
 
 function validateUserLogin() {
     const emailEl = document.getElementById('email');
