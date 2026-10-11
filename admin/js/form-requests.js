@@ -1286,6 +1286,7 @@ body {
 
 .detailsTable td.val-col {
     text-align: left;
+    font-weight: bold;
 }
 
 .barcodeBox {
