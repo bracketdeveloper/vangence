@@ -1292,7 +1292,7 @@ body {
     left: 3px;
     right: 3px;
     bottom: 11px;
-    height: 30px;
+    height: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
