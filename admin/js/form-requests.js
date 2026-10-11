@@ -1220,17 +1220,34 @@ body {
     overflow: hidden;
 }
 
-.productName {
+.companyName {
     position: absolute;
     top: 2px;
     left: 4px;
     right: 4px;
-    height: 24%;
+    height: 18%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 11px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    overflow: hidden;
+}
+
+.productName {
+    position: absolute;
+    top: 21px;
+    left: 4px;
+    right: 4px;
+    height: 22%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
     font-weight: bold;
     line-height: 1.1;
     overflow-wrap: anywhere;
@@ -1239,16 +1256,15 @@ body {
 
 .color {
     position: absolute;
-    top: 28%;
+    top: 40%;
     left: 4px;
     right: 4px;
-    height: 14%;
+    height: 12%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 10px;
-    font-weight: bold;
+    font-size: 8px;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -1256,15 +1272,15 @@ body {
 
 .price {
     position: absolute;
-    top: 44%;
+    top: 53%;
     left: 4px;
     right: 4px;
-    height: 14%;
+    height: 13%;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: bold;
     line-height: 1;
     white-space: nowrap;
@@ -1276,7 +1292,7 @@ body {
     left: 3px;
     right: 3px;
     bottom: 11px;
-    height: 32px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1285,7 +1301,7 @@ body {
 .barcodeBox svg {
     display: block;
     width: 100%;
-    height: 32px;
+    height: 30px;
 }
 
 .barcodeNum {
@@ -1303,6 +1319,11 @@ body {
 
     win.document.write('</style></head><body>');
     win.document.write('<div class="label">');
+
+    // Company Name
+    win.document.write(
+        '<div class="companyName">Vangence</div>'
+    );
 
     // Product name
     win.document.write(
@@ -1353,7 +1374,7 @@ window.onload = function () {
         displayValue: false,
         margin: 2,
         width: 1.4,
-        height: 32
+        height: 30
     });
 
     setTimeout(function () {
