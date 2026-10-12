@@ -831,9 +831,9 @@ function printBill(data) {
     win.document.write('<hr class="dhr">');
     win.document.write('<table class="summary">');
     win.document.write('<tr><td class="label">Final Bill:</td><td class="right">' + parseFloat(data.final_bill || 0).toFixed(2) + '</td></tr>');
-    win.document.write('<tr><td class="label">Payment Method:</td><td class="right">' + (data.payment_method || '-') + '</td></tr>');
     win.document.write('<tr><td class="label">Amount Received:</td><td class="right">' + parseFloat(data.amount_received || 0).toFixed(2) + '</td></tr>');
-    win.document.write('<tr><td class="label">Change Given:</td><td class="right">' + parseFloat(data.change_given || 0).toFixed(2) + '</td></tr>');
+    win.document.write('<tr><td class="label">Change Due:</td><td class="right">' + parseFloat(data.change_given || 0).toFixed(2) + '</td></tr>');
+    win.document.write('<tr><td class="label">Payment Method:</td><td class="right">' + (data.payment_method || '-') + '</td></tr>');
     win.document.write('</table>');
 
     // Terms & Conditions
