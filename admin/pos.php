@@ -59,7 +59,7 @@ require_once("includes/auth_admin.php");
                                             <th>Qty</th>
                                             <th>Discount %</th>
                                             <th>Discount Amt</th>
-                                            <th>Tax (12%)</th>
+<!--                                            <th>Tax (12%)</th>-->
                                             <th>Line Total</th>
                                             <th>Actions</th>
                                         </tr>

@@ -105,7 +105,8 @@ function addProduct(barcode, productName, price, productId, stockQty) {
     } else {
         let subtotal = price * 1;
         let tax = subtotal * 0.12;
-        let lineTotal = subtotal + tax;
+        // let lineTotal = subtotal + tax;
+        let lineTotal = subtotal;
 
         let newRow = `
         <tr data-barcode="${barcode}" data-stock="${stockQty}" data-discount="0">
@@ -123,7 +124,7 @@ function addProduct(barcode, productName, price, productId, stockQty) {
                 </div>
             </td>
             <td class="discount-amt">0.00</td>
-            <td class="tax">${tax.toFixed(2)}</td>
+<!--            <td class="tax">${tax.toFixed(2)}</td>-->
             <td class="line-total">${lineTotal.toFixed(2)}</td>
             <td>
                 <button class="increase">+</button>
@@ -148,7 +149,8 @@ function recalcRow(row) {
     let discountAmt = subtotal * (discountPercent / 100);
     let taxable = subtotal - discountAmt;
     let tax = taxable * 0.12;
-    let lineTotal = taxable + tax;
+    // let lineTotal = taxable + tax;
+    let lineTotal = taxable;
 
     row.find(".discount-amt").text(discountAmt.toFixed(2));
     row.find(".tax").text(tax.toFixed(2));
@@ -614,7 +616,7 @@ function getTableData() {
             qty: parseInt($(this).find('.qty').text()),
             discount_percent: parseFloat($(this).attr('data-discount')) || 0,
             discount_amount: parseFloat($(this).find('.discount-amt').text()) || 0,
-            tax: parseFloat($(this).find('.tax').text()),
+            // tax: parseFloat($(this).find('.tax').text()),
             total: parseFloat($(this).find('.line-total').text())
         });
     });
@@ -802,7 +804,7 @@ function printBill(data) {
     win.document.write('<th class="right">Qty</th>');
     win.document.write('<th class="right">Disc%</th>');
     win.document.write('<th class="right">Disc Amt</th>');
-    win.document.write('<th class="right">Tax(12%)</th>');
+    // win.document.write('<th class="right">Tax(12%)</th>');
     win.document.write('<th class="right">Total</th>');
     win.document.write('</tr></thead><tbody>');
 
@@ -820,7 +822,7 @@ function printBill(data) {
         html += '<td class="right">' + r.qty + '</td>';
         html += '<td class="right">' + (discPercent > 0 ? discPercent + '%' : '-') + '</td>';
         html += '<td class="right">' + (discAmt > 0 ? discAmt.toFixed(2) : '-') + '</td>';
-        html += '<td class="right">' + tax.toFixed(2) + '</td>';
+        // html += '<td class="right">' + tax.toFixed(2) + '</td>';
         html += '<td class="right">' + total.toFixed(2) + '</td>';
         html += '</tr>';
     });
@@ -930,7 +932,8 @@ window.calculateFinalBillEdit = function () {
             const qty = parseFloat(qtyEl.textContent) || 0;
             const subtotal = price * qty;
             const tax = subtotal * 0.12;
-            const lineTotal = subtotal + tax;
+            // const lineTotal = subtotal + tax;
+            const lineTotal = subtotal;
 
             if (taxEl) taxEl.textContent = tax.toFixed(2);
             if (lineTotalEl) lineTotalEl.textContent = lineTotal.toFixed(2);
@@ -1010,7 +1013,8 @@ window.addProductEdit = function (barcode) {
             var rowCount  = tbody.querySelectorAll('tr').length;
             var subtotal  = price;
             var tax       = subtotal * 0.12;
-            var lineTotal = subtotal + tax;
+            // var lineTotal = subtotal + tax;
+            var lineTotal = subtotal;
 
             var tr = document.createElement('tr');
             tr.setAttribute('data-barcode', product.barcode);
@@ -1031,7 +1035,7 @@ window.addProductEdit = function (barcode) {
                 '</div>' +
                 '</td>' +
                 '<td class="discount-amt">0.00</td>' +
-                '<td class="tax">' + tax.toFixed(2) + '</td>' +
+                // '<td class="tax">' + tax.toFixed(2) + '</td>' +
                 '<td class="line-total">' + lineTotal.toFixed(2) + '</td>' +
                 '<td>' +
                 '<button class="btn btn-sm btn-secondary increase-edit">+</button> ' +
@@ -1631,7 +1635,8 @@ function recalcRowEdit(row) {
     var discountAmt = subtotal * (discountPercent / 100);
     var taxable     = subtotal - discountAmt;
     var tax         = taxable * 0.12;
-    var lineTotal   = taxable + tax;
+    // var lineTotal   = taxable + tax;
+    var lineTotal   = taxable;
 
     row.find('.discount-amt').text(discountAmt.toFixed(2));
     row.find('.tax').text(tax.toFixed(2));
