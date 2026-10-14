@@ -67,7 +67,7 @@ $changeGiven    = $sale['change_given'];
                                 <th>Qty</th>
                                 <th>Discount %</th>
                                 <th>Discount Amt</th>
-                                <th>Tax (12%)</th>
+<!--                                <th>Tax (12%)</th>-->
                                 <th>Line Total</th>
                                 <th>Actions</th>
                             </tr>
@@ -84,7 +84,8 @@ $changeGiven    = $sale['change_given'];
                                     $discountAmount = $subtotal * ($discountPercent / 100);
                                     $taxable        = $subtotal - $discountAmount;
                                     $tax            = $taxable * 0.12;
-                                    $total          = $taxable + $tax;
+//                                    $total          = $taxable + $tax;
+                                    $total          = $taxable - 5;
                                 }
                                 ?>
                                 <tr data-barcode="<?php echo htmlspecialchars($item['product_id']); ?>"
@@ -107,7 +108,7 @@ $changeGiven    = $sale['change_given'];
                                         </div>
                                     </td>
                                     <td class="discount-amt"><?php echo number_format($discountAmount, 2, '.', ''); ?></td>
-                                    <td class="tax"><?php echo number_format($tax, 2, '.', ''); ?></td>
+<!--                                    <td class="tax">--><?php //echo number_format($tax, 2, '.', ''); ?><!--</td>-->
                                     <td class="line-total"><?php echo number_format($total, 2, '.', ''); ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-secondary increase-edit">+</button>
