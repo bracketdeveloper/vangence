@@ -735,8 +735,8 @@ function saveBill(printAfter) {
 function printBill(data) {
     // Edit these to match your actual store details
     const SHOP_NAME = "Vangence";
-    const SHOP_ADDRESS = "123 Main Street, Lahore, Punjab";
-    const SHOP_PHONE = "+92 300 1234567";
+    const SHOP_ADDRESS = "27/A Commercial Plaza, Central Park, Lahore";
+    const SHOP_PHONE = "0344-1345673";
 
     const TERMS = [
         "No cash refunds.",
@@ -750,10 +750,11 @@ function printBill(data) {
     win.document.write('<html><head><title>Bill #' + data.sale_id + '</title>');
     win.document.write('<style>');
 
-    // Thermal printer page setup — 80mm roll (printable ~72mm / ~204pt)
+    // Thermal printer page setup - 80mm roll
     win.document.write('@page{size:80mm auto;margin:0;}');
     win.document.write('*{box-sizing:border-box;}');
-    win.document.write('body{font-family:monospace;font-size:11px;margin:0;padding:4mm 4mm 0 4mm;color:#000;width:72mm;}');
+    // width:100% instead of 72mm so the content never exceeds the printable area
+    win.document.write('body{font-family:monospace;font-size:11px;margin:0;padding:2mm 3mm 0 3mm;color:#000;width:100%;}');
 
     win.document.write('.shop-name{text-align:center;font-size:14px;font-weight:bold;letter-spacing:1px;margin:0 0 2px;}');
     win.document.write('.shop-info{text-align:center;font-size:10px;margin:1px 0;color:#222;}');
@@ -761,14 +762,15 @@ function printBill(data) {
     win.document.write('.center{text-align:center;}');
     win.document.write('.right{text-align:right;}');
 
-    win.document.write('table{width:100%;border-collapse:collapse;margin-top:4px;}');
-    win.document.write('th{border-bottom:1px solid #000;padding:2px 3px;text-align:left;font-size:10px;}');
+    // Fixed layout so column widths are respected and Total is never pushed off the paper
+    win.document.write('table{width:100%;border-collapse:collapse;margin-top:4px;table-layout:fixed;}');
+    win.document.write('th{border-bottom:1px solid #000;padding:2px 1px;text-align:left;font-size:8px;}');
     win.document.write('th.right{text-align:right;}');
-    win.document.write('td{padding:2px 3px;border-bottom:1px dotted #888;font-size:10px;}');
+    win.document.write('td{padding:2px 1px;border-bottom:1px dotted #888;font-size:9px;vertical-align:top;word-wrap:break-word;}');
     win.document.write('td.right{text-align:right;}');
 
-    win.document.write('.summary{margin-top:6px;width:100%;}');
-    win.document.write('.summary td{border:none;padding:1px 3px;font-size:10px;}');
+    win.document.write('.summary{margin-top:6px;width:100%;table-layout:auto;}');
+    win.document.write('.summary td{border:none;padding:1px 1px;font-size:10px;}');
     win.document.write('.summary .label{font-weight:bold;}');
 
     win.document.write('hr{border:none;border-top:1px solid #000;margin:5px 0;}');
@@ -782,7 +784,7 @@ function printBill(data) {
     win.document.write('.footer{text-align:center;margin-top:8px;font-size:10px;padding-bottom:6mm;}');
 
     // Hide everything except the receipt when printing
-    win.document.write('@media print{body{margin:0;padding:2mm 4mm 0 4mm;}}');
+    win.document.write('@media print{body{margin:0;padding:2mm 3mm 0 3mm;}}');
 
     win.document.write('</style>');
     win.document.write('</head><body>');
@@ -797,6 +799,16 @@ function printBill(data) {
     win.document.write('<p class="center">Bill #: ' + data.sale_id + '</p>');
     win.document.write('<hr class="dhr">');
     win.document.write('<table>');
+    // Column widths (total = 100%)
+    win.document.write('<colgroup>');
+    win.document.write('<col style="width:5%">');   // #
+    win.document.write('<col style="width:23%">');  // Item
+    win.document.write('<col style="width:16%">');  // Price
+    win.document.write('<col style="width:7%">');   // Qty
+    win.document.write('<col style="width:10%">');  // Disc%
+    win.document.write('<col style="width:18%">');  // Disc Amt
+    win.document.write('<col style="width:21%">');  // Total
+    win.document.write('</colgroup>');
     win.document.write('<thead><tr>');
     win.document.write('<th>#</th>');
     win.document.write('<th>Item</th>');
@@ -859,11 +871,10 @@ function printBill(data) {
 
     // Auto paper cut + close after printing
     win.onafterprint = function () {
-        // Send ESC/POS paper cut command via a hidden iframe (works when
-        // the receipt printer is set as the default printer and the browser
-        // has raw printing access, e.g. QZ Tray or similar middleware).
-        // If you use QZ Tray, replace this block with your qz.print() cut call.
-        cutPaper(win);
+        // Only call cutPaper if it exists in your project (e.g. QZ Tray)
+        if (typeof cutPaper === 'function') {
+            cutPaper(win);
+        }
         win.close();
     };
 }
